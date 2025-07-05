@@ -25,7 +25,7 @@ struct AscensionApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AscensionHomeView()
         }
         .modelContainer(sharedModelContainer)
     }
