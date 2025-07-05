@@ -16,6 +16,7 @@ struct AscensionHomeView: View {
     ]
 
     @State private var showQuote = false
+    @State private var showArkheionMap = false
 
     var body: some View {
         GeometryReader { geo in
@@ -41,7 +42,11 @@ struct AscensionHomeView: View {
                         active: module.active
                     ) {
                         if module.active {
-                            print("\(module.name) launched")
+                            if module.name == "Arkheion" {
+                                showArkheionMap = true
+                            } else {
+                                print("\(module.name) launched")
+                            }
                         } else {
                             print("Locked")
                         }
@@ -55,7 +60,7 @@ struct AscensionHomeView: View {
                 // 2. Heart Sun
                 HeartSunView()
                     .onTapGesture {
-                        print("Arkheion Launched")
+                        showArkheionMap = true
                     }
 
                 // 4. ARC sigil
@@ -85,6 +90,11 @@ struct AscensionHomeView: View {
                     .foregroundColor(.white.opacity(0.9))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: headerAlignment)
                     .padding([.top, .leading, .trailing], 20)
+            }
+        }
+        .fullScreenCover(isPresented: $showArkheionMap) {
+            NavigationStack {
+                ArkheionMapView()
             }
         }
     }
