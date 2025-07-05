@@ -302,17 +302,7 @@ private struct RootNodeView: View {
 
 private struct HeartSun: View {
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.orange.opacity(0.9))
-                .frame(width: 120, height: 120)
-                .shadow(color: Color.orange.opacity(0.4), radius: 40)
-
-            Circle()
-                .stroke(Color.orange.opacity(0.6), lineWidth: 6)
-                .frame(width: 140, height: 140)
-                .blur(radius: 2)
-        }
+        GlowingSunView(animated: false)
     }
 }
 
