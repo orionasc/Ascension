@@ -9,11 +9,13 @@ struct RadialNavMenuItem: Identifiable {
 struct HalfCircle: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.addArc(center: CGPoint(x: rect.midX, y: rect.maxY),
-                    radius: rect.width / 2,
-                    startAngle: .degrees(180),
-                    endAngle: .degrees(0),
-                    clockwise: false)
+        path.addArc(
+            center: CGPoint(x: rect.midX, y: rect.minY),
+            radius: rect.width / 2,
+            startAngle: .degrees(0),
+            endAngle: .degrees(180),
+            clockwise: true
+        )
         return path
     }
 }
@@ -35,7 +37,7 @@ struct RadialNavMenuView: View {
                     let progress = Double(index) / Double(max(items.count - 1, 1))
                     let angle = Double.pi * (1 - progress)
                     let radius = geo.size.width / 2 * 0.75
-                    let center = CGPoint(x: geo.size.width / 2, y: geo.size.height)
+                    let center = CGPoint(x: geo.size.width / 2, y: 0)
                     let x = center.x + radius * cos(angle)
                     let y = center.y + radius * sin(angle)
 
@@ -50,7 +52,7 @@ struct RadialNavMenuView: View {
                             .foregroundColor(.white)
                     }
                     .position(x: x, y: y)
-                    .scaleEffect(visible ? 1 : 0.5)
+                    .scaleEffect(visible ? 1 : 0.9)
                     .opacity(visible ? 1 : 0)
                     .animation(
                         .easeOut(duration: 0.3).delay(Double(index) * 0.05),
