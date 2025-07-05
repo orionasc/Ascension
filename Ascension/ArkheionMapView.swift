@@ -11,6 +11,14 @@ struct ArkheionMapView: View {
     @State private var dragOffsets: [UUID: CGSize] = [:]
     @State private var showDeleteConfirm = false
 
+    // Track node positions for connectors
+    @State private var nodePositions: [UUID: CGPoint] = [:]
+
+    // Connection drawing state
+    @State private var drawingConnection = false
+    @State private var connectionStart: (node: UUID, anchor: Int, point: CGPoint)?
+    @State private var currentPoint: CGPoint = .zero
+
     private let archetypes = ["Scholar", "Sage", "Sovereign"]
     @State private var expanded: [String: Bool] = ["Scholar": false, "Sage": false, "Sovereign": false]
     @State private var knownNodeIDs: Set<UUID> = []
@@ -22,7 +30,12 @@ struct ArkheionMapView: View {
             let subRadius = radius * 0.6
 
             ZStack {
+                connectionLines
                 rootNodes(radius: radius, subRadius: subRadius)
+                if drawingConnection, let start = connectionStart {
+                    NodeConnector(start: start.point, end: currentPoint)
+                        .stroke(Color.white, lineWidth: 2)
+                }
                 HeartSun()
                 controlPanel
             }
@@ -55,6 +68,17 @@ struct ArkheionMapView: View {
             let added = ids.subtracting(knownNodeIDs)
             newlyAddedIDs.formUnion(added)
             knownNodeIDs = ids
+        }
+    }
+
+    @ViewBuilder
+    private var connectionLines: some View {
+        ForEach(progressModel.connections, id: .id) { connection in
+            if let from = nodePositions[connection.from],
+               let to = nodePositions[connection.to] {
+                NodeConnector(start: from, end: to)
+                    .stroke(Color.white.opacity(0.6), lineWidth: 2)
+            }
         }
     }
 
@@ -112,8 +136,9 @@ struct ArkheionMapView: View {
             let drag = dragOffsets[node.id] ?? .zero
             let finalX = baseX + node.offset.width + drag.width
             let finalY = baseY + node.offset.height + drag.height
+            nodePositions[node.id] = CGPoint(x: finalX, y: finalY)
 
-            NodeConnectorView(start: rootPos, end: CGPoint(x: finalX, y: finalY))
+            NodeConnector(start: rootPos, end: CGPoint(x: finalX, y: finalY))
                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
 
             let isNew = newlyAddedIDs.contains(node.id)
@@ -141,6 +166,18 @@ struct ArkheionMapView: View {
                 onAppearDone: { newlyAddedIDs.remove(node.id) }
             )
             .offset(x: finalX, y: finalY)
+            .overlay(
+                NodeConnectorView(
+                    nodeID: node.id,
+                    center: CGPoint(x: finalX, y: finalY),
+                    editMode: moveMode,
+                    onStart: startConnection,
+                    onDrag: updateConnection,
+                    onEnd: endConnection
+                )
+                .frame(width: 70, height: 70)
+                .offset(x: finalX, y: finalY)
+            )
         }
     }
 
@@ -170,6 +207,26 @@ struct ArkheionMapView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .padding()
         .transition(.opacity)
+    }
+
+    // MARK: - Connection Handling
+
+    private func startConnection(id: UUID, anchor: Int, point: CGPoint) {
+        drawingConnection = true
+        connectionStart = (node: id, anchor: anchor, point: point)
+        currentPoint = point
+    }
+
+    private func updateConnection(_ point: CGPoint) {
+        currentPoint = point
+    }
+
+    private func endConnection(id: UUID, anchor: Int, _ point: CGPoint) {
+        drawingConnection = false
+        if let start = connectionStart, start.node != id {
+            progressModel.addConnection(from: start.node, to: id)
+        }
+        connectionStart = nil
     }
 }
 
