@@ -14,11 +14,11 @@ struct HeartSunView: View {
                 .stroke(Color.orange.opacity(0.6), lineWidth: 6)
                 .frame(width: 140, height: 140)
                 .blur(radius: 2)
-                .scaleEffect(animateGlow ? 1.2 : 1.0)
+                .scaleEffect(animateGlow ? 1.2 : 1.0, anchor: .center)
                 .opacity(animateGlow ? 0.0 : 0.4)
                 .animation(
                     .easeOut(duration: 3)
-                        .repeatForever(autoreverses: false),
+                        .repeatForever(autoreverses: true),
                     value: animateGlow
                 )
         }
