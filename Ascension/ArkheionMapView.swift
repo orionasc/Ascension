@@ -3,7 +3,9 @@ import SwiftUI
 struct ArkheionMapView: View {
     @EnvironmentObject private var progressModel: ArkheionProgressModel
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.safeAreaInsets) private var safeInsets
+    // Explicitly type the `safeAreaInsets` environment value to avoid generic
+    // inference issues when compiling on older SDKs.
+    @Environment(\.safeAreaInsets) private var safeInsets: EdgeInsets
     @State private var editNode: ArkheionNode?
     @State private var createNodeArchetype: String?
     @State private var selectedArchetype: String = "Scholar"

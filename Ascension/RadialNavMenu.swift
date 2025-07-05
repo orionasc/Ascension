@@ -7,7 +7,9 @@ struct RadialNavMenuItem: Identifiable {
 }
 
 struct RadialNavMenu: View {
-    @Environment(\.safeAreaInsets) private var safeAreaInsets
+    // Explicitly specify the type for the `safeAreaInsets` environment value
+    // so the compiler can resolve the generic parameter on all supported SDKs.
+    @Environment(\.safeAreaInsets) private var safeAreaInsets: EdgeInsets
     var items: [RadialNavMenuItem]
     @State private var show = false
 
