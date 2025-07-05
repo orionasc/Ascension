@@ -88,15 +88,17 @@ struct ArkheionMapView: View {
 
                 controlPanel
 
-                RadialNavMenu(items: [
-                    RadialNavMenuItem(icon: "arrowshape.turn.up.left") {
-                        dismiss()
-                    },
-                    RadialNavMenuItem(icon: "sun.max") {},
-                    RadialNavMenuItem(icon: "shield") {}
-                ])
+                VStack {
+                    RadialNavMenuView(items: [
+                        RadialNavMenuItem(icon: "arrowshape.turn.up.left") {
+                            dismiss()
+                        },
+                        RadialNavMenuItem(icon: "sun.max") {},
+                        RadialNavMenuItem(icon: "shield") {}
+                    ])
+                }
                 .frame(maxWidth: .infinity, alignment: .top)
-                .padding(.top, 10)
+                .padding(.top, 20)
 
                 SidebarControls(
                     zoomIn: { zoom = min(zoom + 0.2, 2.5) },
