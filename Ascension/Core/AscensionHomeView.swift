@@ -122,15 +122,21 @@ extension View {
         isPresented: Binding<Bool>,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        if #available(macOS 13.0, *) {
-            fullScreenCover(isPresented: isPresented, content: content)
-        } else {
-            sheet(isPresented: isPresented) {
-                content()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .ignoresSafeArea()
+        modifier(MacMapPresenter(isPresented: isPresented))
+    }
+}
+
+private struct MacMapPresenter: ViewModifier {
+    @Binding var isPresented: Bool
+    @Environment(\.openWindow) private var openWindow
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isPresented) { show in
+                guard show else { return }
+                openWindow(id: "ArkheionMap")
+                DispatchQueue.main.async { isPresented = false }
             }
-        }
     }
 }
 #else
