@@ -13,7 +13,7 @@ struct RadialNavMenu: View {
 
     var body: some View {
         GeometryReader { geo in
-            let radius = min(geo.size.width, geo.size.height) / 5
+            let radius: CGFloat = 130
             ZStack {
                 arcBackground(radius: radius + 40)
                     .opacity(show ? 1 : 0)
