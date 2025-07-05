@@ -23,9 +23,12 @@ struct AscensionApp: App {
         }
     }()
 
+    @StateObject private var progressModel = ArkheionProgressModel()
+
     var body: some Scene {
         WindowGroup {
             AscensionHomeView()
+                .environmentObject(progressModel)
         }
         .modelContainer(sharedModelContainer)
     }
