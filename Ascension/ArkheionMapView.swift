@@ -10,39 +10,43 @@ struct ArkheionMapView: View {
     @State private var knownNodeIDs: Set<UUID> = []
     @State private var newlyAddedIDs: Set<UUID> = []
 
+    @ViewBuilder
+    private func archetypeViews(radius: CGFloat, subRadius: CGFloat) -> some View {
+        ForEach(Array(archetypes.enumerated()), id: \.element) { index, archetype in
+            let rootAngle = Double(index) / Double(archetypes.count) * 2 * .pi
+
+            RootNodeView(archetype: archetype, isExpanded: expanded[archetype] ?? false) {
+                withAnimation(.spring()) { expanded[archetype]?.toggle() }
+            }
+            .offset(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
+
+            if expanded[archetype] ?? false {
+                let nodes = progressModel.nodes.filter { $0.archetype == archetype }
+                ForEach(Array(nodes.enumerated()), id: \.element.id) { subIndex, node in
+                    let arcRange = Double.pi / 2
+                    let startAngle = rootAngle - arcRange / 2
+                    let angle = startAngle + arcRange * Double(subIndex) / Double(max(nodes.count - 1, 1))
+                    NodeView(node: node,
+                            isNew: newlyAddedIDs.contains(node.id),
+                            appearDelay: Double(subIndex) * 0.05,
+                            onTap: { print(node.title) },
+                            onEdit: { editNode = node },
+                            onDelete: { progressModel.deleteNode(with: node.id) },
+                            onAppearDone: { newlyAddedIDs.remove(node.id) })
+                    .offset(x: radius * cos(rootAngle) + subRadius * cos(angle),
+                            y: radius * sin(rootAngle) + subRadius * sin(angle))
+                }
+            }
+        }
+    }
+
     var body: some View {
         GeometryReader { geo in
             let radius = min(geo.size.width, geo.size.height) * 0.35
             let subRadius = radius * 0.6
 
             ZStack {
-                ForEach(Array(archetypes.enumerated()), id: \.element) { index, archetype in
-                    let rootAngle = Double(index) / Double(archetypes.count) * 2 * .pi
-
-                    RootNodeView(archetype: archetype, isExpanded: expanded[archetype] ?? false) {
-                        withAnimation(.spring()) { expanded[archetype]?.toggle() }
-                    }
-                    .offset(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
-
-                    if expanded[archetype] ?? false {
-                        let nodes = progressModel.nodes.filter { $0.archetype == archetype }
-                        ForEach(Array(nodes.enumerated()), id: \.element.id) { subIndex, node in
-                            let arcRange = Double.pi / 2
-                            let startAngle = rootAngle - arcRange / 2
-                            let angle = startAngle + arcRange * Double(subIndex) / Double(max(nodes.count - 1, 1))
-                            NodeView(node: node,
-                                    isNew: newlyAddedIDs.contains(node.id),
-                                    appearDelay: Double(subIndex) * 0.05,
-                                    onTap: { print(node.title) },
-                                    onEdit: { editNode = node },
-                                    onDelete: { progressModel.deleteNode(with: node.id) },
-                                    onAppearDone: { newlyAddedIDs.remove(node.id) })
-                            .offset(x: radius * cos(rootAngle) + subRadius * cos(angle),
-                                    y: radius * sin(rootAngle) + subRadius * sin(angle))
-                        }
-                    }
-                }
-
+                archetypeViews(radius: radius, subRadius: subRadius)
                 HeartSun()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
