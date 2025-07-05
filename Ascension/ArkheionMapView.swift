@@ -136,9 +136,8 @@ struct ArkheionMapView: View {
             let drag = dragOffsets[node.id] ?? .zero
             let finalX = baseX + node.offset.width + drag.width
             let finalY = baseY + node.offset.height + drag.height
-            DispatchQueue.main.async {
-                nodePositions[node.id] = CGPoint(x: finalX, y: finalY)
-            }
+            let _ = updatePosition(for: node.id,
+                                               point: CGPoint(x: finalX, y: finalY))
 
             NodeConnector(start: rootPos, end: CGPoint(x: finalX, y: finalY))
                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
@@ -210,7 +209,11 @@ struct ArkheionMapView: View {
         .padding()
         .transition(.opacity)
     }
-
+    private func updatePosition(for id: UUID, point: CGPoint) {
+        DispatchQueue.main.async {
+            nodePositions[id] = point
+        }
+    }
     // MARK: - Connection Handling
 
     private func startConnection(id: UUID, anchor: Int, point: CGPoint) {
