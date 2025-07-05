@@ -7,9 +7,6 @@ struct RadialNavMenuItem: Identifiable {
 }
 
 struct RadialNavMenu: View {
-    // Explicitly specify the type for the `safeAreaInsets` environment value
-    // so the compiler can resolve the generic parameter on all supported SDKs.
-    @Environment(\.safeAreaInsets) private var safeAreaInsets: EdgeInsets
     var items: [RadialNavMenuItem]
     @State private var show = false
 
@@ -34,7 +31,7 @@ struct RadialNavMenu: View {
                             .foregroundColor(.white)
                     }
                     .position(x: geo.size.width / 2 + x,
-                              y: safeAreaInsets.top + 30 + y)
+                              y: topInset + 30 + y)
                     .scaleEffect(show ? 1 : 0.5)
                     .opacity(show ? 1 : 0)
                     .animation(
@@ -47,6 +44,14 @@ struct RadialNavMenu: View {
         }
         .allowsHitTesting(true)
         .onAppear { show = true }
+    }
+
+    private var topInset: CGFloat {
+#if os(iOS)
+        return 44
+#else
+        return 20
+#endif
     }
 }
 

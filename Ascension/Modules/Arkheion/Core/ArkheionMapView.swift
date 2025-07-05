@@ -5,7 +5,6 @@ struct ArkheionMapView: View {
     @Environment(\.dismiss) private var dismiss
     // Explicitly type the `safeAreaInsets` environment value to avoid generic
     // inference issues when compiling on older SDKs.
-    @Environment(\.safeAreaInsets) private var safeInsets: EdgeInsets
     @State private var editNode: ArkheionNode?
     @State private var createNodeArchetype: String?
     @State private var selectedArchetype: String = "Scholar"
@@ -32,6 +31,14 @@ struct ArkheionMapView: View {
     @State private var canvasOffset: CGSize = .zero
     @GestureState private var dragTranslation: CGSize = .zero
     @State private var zoom: CGFloat = 1.0
+    
+    private var topInset: CGFloat {
+       #if os(iOS)
+           return 44
+       #else
+           return 20
+       #endif
+       }
 
     var body: some View {
         GeometryReader { geo in
@@ -115,12 +122,14 @@ struct ArkheionMapView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .onChange(of: progressModel.nodes) { nodes in
-            let ids = Set(nodes.map(\.id))
-            let added = ids.subtracting(knownNodeIDs)
+        .onChange(of: progressModel.nodes) { oldNodes, newNodes in
+            let ids = Set(newNodes.map(\.id))
+            let added = ids.subtracting(Set(oldNodes.map(\.id)))
             newlyAddedIDs.formUnion(added)
             knownNodeIDs = ids
         }
+    
+
     }
 
     @ViewBuilder
