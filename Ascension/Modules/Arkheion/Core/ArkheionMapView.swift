@@ -27,7 +27,6 @@ struct ArkheionMapView: View {
     @State private var newlyAddedIDs: Set<UUID> = []
 
     // Map navigation state
-    @State private var dragModeActive = false
     @State private var canvasOffset: CGSize = .zero
     @GestureState private var dragTranslation: CGSize = .zero
     @State private var zoom: CGFloat = 1.0
@@ -80,11 +79,7 @@ struct ArkheionMapView: View {
                     x: canvasOffset.width + dragTranslation.width,
                     y: canvasOffset.height + dragTranslation.height
                 )
-#if os(macOS)
                 .gesture(drag)
-#else
-                .gesture(dragModeActive ? drag : nil)
-#endif
 
                 controlPanel
 
@@ -102,9 +97,7 @@ struct ArkheionMapView: View {
 
                 SidebarControls(
                     zoomIn: { zoom = min(zoom + 0.2, 2.5) },
-                    zoomOut: { zoom = max(zoom - 0.2, 0.6) },
-                    dragMode: dragModeActive,
-                    toggleDragMode: { dragModeActive.toggle() }
+                    zoomOut: { zoom = max(zoom - 0.2, 0.6) }
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
