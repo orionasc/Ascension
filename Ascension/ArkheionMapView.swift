@@ -3,6 +3,7 @@ import SwiftUI
 struct ArkheionMapView: View {
     @EnvironmentObject private var progressModel: ArkheionProgressModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.safeAreaInsets) private var safeInsets
     @State private var editNode: ArkheionNode?
     @State private var createNodeArchetype: String?
     @State private var selectedArchetype: String = "Scholar"
@@ -24,20 +25,69 @@ struct ArkheionMapView: View {
     @State private var knownNodeIDs: Set<UUID> = []
     @State private var newlyAddedIDs: Set<UUID> = []
 
+    // Map navigation state
+    @State private var dragModeActive = false
+    @State private var canvasOffset: CGSize = .zero
+    @GestureState private var dragTranslation: CGSize = .zero
+    @State private var zoom: CGFloat = 1.0
+
     var body: some View {
         GeometryReader { geo in
             let radius = min(geo.size.width, geo.size.height) * 0.35
             let subRadius = radius * 0.6
 
-            ZStack {
-                connectionLines
-                rootNodes(radius: radius, subRadius: subRadius)
-                if drawingConnection, let start = connectionStart {
-                    NodeConnector(start: start.point, end: currentPoint)
-                        .stroke(Color.white, lineWidth: 2)
+            let drag = DragGesture()
+                .updating($dragTranslation) { value, state, _ in
+                    state = value.translation
                 }
-                HeartSun()
+                .onEnded { value in
+                    canvasOffset.width += value.translation.width
+                    canvasOffset.height += value.translation.height
+                }
+
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.32, green: 0.18, blue: 0.10),
+                        Color(red: 0.26, green: 0.26, blue: 0.28)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+
+                ZStack {
+                    connectionLines
+                    rootNodes(radius: radius, subRadius: subRadius)
+                    if drawingConnection, let start = connectionStart {
+                        NodeConnector(start: start.point, end: currentPoint)
+                            .stroke(Color.white, lineWidth: 2)
+                    }
+                    HeartSun()
+                }
+                .scaleEffect(zoom)
+                .offset(
+                    x: canvasOffset.width + dragTranslation.width,
+                    y: canvasOffset.height + dragTranslation.height
+                )
+                .gesture(dragModeActive ? drag : nil)
+
                 controlPanel
+
+                RadialNavMenu(items: [
+                    RadialNavMenuItem(icon: "arrowshape.turn.up.left") {
+                        dismiss()
+                    },
+                    RadialNavMenuItem(icon: "sun.max") {},
+                    RadialNavMenuItem(icon: "shield") {}
+                ])
+
+                SidebarControls(
+                    zoomIn: { zoom = min(zoom + 0.2, 2.5) },
+                    zoomOut: { zoom = max(zoom - 0.2, 0.7) },
+                    dragMode: dragModeActive,
+                    toggleDragMode: { dragModeActive.toggle() }
+                )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
