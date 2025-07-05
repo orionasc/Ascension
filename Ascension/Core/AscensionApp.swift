@@ -31,5 +31,15 @@ struct AscensionApp: App {
                 .environmentObject(progressModel)
         }
         .modelContainer(sharedModelContainer)
+
+#if os(macOS)
+        WindowGroup(id: "ArkheionMap") {
+            NavigationStack {
+                ArkheionMapView()
+            }
+            .environmentObject(progressModel)
+        }
+        .modelContainer(sharedModelContainer)
+#endif
     }
 }
