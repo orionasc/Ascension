@@ -37,9 +37,21 @@ struct ArkheionNode: Identifiable, Codable, Equatable {
     }
 }
 
+struct NodeConnection: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var from: UUID
+    var to: UUID
+}
+
+private struct NodeFile: Codable {
+    var nodes: [ArkheionNode]
+    var connections: [NodeConnection]
+}
+
 @MainActor
 final class ArkheionProgressModel: ObservableObject {
     @Published private(set) var nodes: [ArkheionNode] = []
+    @Published private(set) var connections: [NodeConnection] = []
 
     private let fileURL: URL
     private let decoder = JSONDecoder()
@@ -62,14 +74,21 @@ final class ArkheionProgressModel: ObservableObject {
         if fm.fileExists(atPath: fileURL.path) {
             do {
                 let data = try Data(contentsOf: fileURL)
-                let decoded = try decoder.decode([ArkheionNode].self, from: data)
-                self.nodes = decoded
+                if let decoded = try? decoder.decode(NodeFile.self, from: data) {
+                    self.nodes = decoded.nodes
+                    self.connections = decoded.connections
+                } else if let legacy = try? decoder.decode([ArkheionNode].self, from: data) {
+                    self.nodes = legacy
+                    self.connections = []
+                }
             } catch {
                 print("Failed to load nodes: \(error)")
                 self.nodes = []
+                self.connections = []
             }
         } else {
             nodes = Self.defaultNodes()
+            connections = []
             await save()
         }
     }
@@ -100,9 +119,23 @@ final class ArkheionProgressModel: ObservableObject {
         }
     }
 
+    func addConnection(from: UUID, to: UUID) {
+        let connection = NodeConnection(from: from, to: to)
+        connections.append(connection)
+        Task { await save() }
+    }
+
+    func removeConnection(id: UUID) {
+        if let idx = connections.firstIndex(where: { $0.id == id }) {
+            connections.remove(at: idx)
+            Task { await save() }
+        }
+    }
+
     func save() async {
         do {
-            let data = try encoder.encode(nodes)
+            let file = NodeFile(nodes: nodes, connections: connections)
+            let data = try encoder.encode(file)
             try data.write(to: fileURL, options: [.atomic])
         } catch {
             print("Failed to save nodes: \(error)")
