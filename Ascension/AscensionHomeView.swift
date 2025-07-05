@@ -53,20 +53,10 @@ struct AscensionHomeView: View {
                 }
 
                 // 2. Heart Sun
-                ZStack {
-                    Circle()
-                        .fill(Color.orange.opacity(0.9))
-                        .frame(width: 120, height: 120)
-                        .shadow(color: Color.orange.opacity(0.4), radius: 40)
-
-                    Circle()
-                        .stroke(Color.orange.opacity(0.6), lineWidth: 6)
-                        .frame(width: 140, height: 140)
-                        .blur(radius: 2)
-                }
-                .onTapGesture {
-                    print("Arkheion Launched")
-                }
+                HeartSunView()
+                    .onTapGesture {
+                        print("Arkheion Launched")
+                    }
 
                 // 4. ARC sigil
                 Image(systemName: "a.circle")
