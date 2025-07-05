@@ -22,93 +22,9 @@ struct ArkheionMapView: View {
             let subRadius = radius * 0.6
 
             ZStack {
-                ForEach(Array(archetypes.enumerated()), id: \.element) { index, archetype in
-                    let rootAngle = Double(index) / Double(archetypes.count) * 2 * .pi
-                    
-                    let rootPos = CGPoint(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
-
-                    RootNodeView(
-                        archetype: archetype,
-                        isExpanded: expanded[archetype] ?? false
-                    ) {
-                        withAnimation(.spring()) {
-                            expanded[archetype]?.toggle()
-                        }
-                        selectedArchetype = archetype
-                    }
-                    .offset(x: rootPos.x, y: rootPos.y)
-
-                    if expanded[archetype] ?? false {
-                        let nodes = progressModel.nodes.filter { $0.archetype == archetype }
-                        ForEach(Array(nodes.enumerated()), id: \.element.id) { subIndex, node in
-                            let arcRange = Double.pi / 2
-                            let startAngle = rootAngle - arcRange / 2
-                            let angle = startAngle + arcRange * Double(subIndex) / Double(max(nodes.count - 1, 1))
-                            let baseX = rootPos.x + subRadius * cos(angle)
-                            let baseY = rootPos.y + subRadius * sin(angle)
-                            let drag = dragOffsets[node.id] ?? .zero
-                            let finalX = baseX + node.offset.width + drag.width
-                            let finalY = baseY + node.offset.height + drag.height
-
-                            NodeConnectorView(start: rootPos, end: CGPoint(x: finalX, y: finalY))
-                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-
-                            let isNew = newlyAddedIDs.contains(node.id)
-                            let isSelected = selectedNodeID == node.id
-                            let delay = Double(subIndex) * 0.05
-
-                            NodeView(
-                                node: node,
-                                isNew: isNew,
-                                isSelected: isSelected,
-                                isMovable: moveMode,
-                                appearDelay: delay,
-                                onTap: { selectedNodeID = node.id },
-                                onEdit: { editNode = node },
-                                onDelete: { progressModel.deleteNode(with: node.id) },
-                                onDrag: { dragOffsets[node.id] = $0 },
-                                onDragEnd: { translation in
-                                    let newOffset = CGSize(
-                                        width: node.offset.width + translation.width,
-                                        height: node.offset.height + translation.height
-                                    )
-                                    progressModel.updateNodeOffset(id: node.id, offset: newOffset)
-                                    dragOffsets[node.id] = .zero
-                                },
-                                onAppearDone: { newlyAddedIDs.remove(node.id) }
-                            )
-                            .offset(x: finalX, y: finalY)
-                        }
-                    }
-                }
-
+                rootNodes(radius: radius, subRadius: subRadius)
                 HeartSun()
-
-                VStack(spacing: 12) {
-                    Button(action: { createNodeArchetype = selectedArchetype }) {
-                        Image(systemName: "plus")
-                            .font(.title2)
-                    }
-                    .buttonStyle(.plain)
-
-                    if let selected = selectedNodeID {
-                        Button(action: { showDeleteConfirm = true }) {
-                            Image(systemName: "trash")
-                                .font(.title2)
-                        }
-                    }
-
-                    Button(action: { moveMode.toggle() }) {
-                        Image(systemName: "pencil")
-                            .font(.title2)
-                            .foregroundColor(moveMode ? .yellow : .primary)
-                    }
-                }
-                .padding()
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                .padding()
-                .transition(.opacity)
+                controlPanel
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -140,6 +56,120 @@ struct ArkheionMapView: View {
             newlyAddedIDs.formUnion(added)
             knownNodeIDs = ids
         }
+    }
+
+    // MARK: - View Builders
+
+    @ViewBuilder
+    private func rootNodes(radius: CGFloat, subRadius: CGFloat) -> some View {
+        ForEach(Array(archetypes.enumerated()), id: \.element) { index, archetype in
+            rootNodeContent(index: index,
+                            archetype: archetype,
+                            radius: radius,
+                            subRadius: subRadius)
+        }
+    }
+
+    @ViewBuilder
+    private func rootNodeContent(index: Int,
+                                 archetype: String,
+                                 radius: CGFloat,
+                                 subRadius: CGFloat) -> some View {
+        let rootAngle = Double(index) / Double(archetypes.count) * 2 * .pi
+        let rootPos = CGPoint(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
+
+        RootNodeView(
+            archetype: archetype,
+            isExpanded: expanded[archetype] ?? false
+        ) {
+            withAnimation(.spring()) {
+                expanded[archetype]?.toggle()
+            }
+            selectedArchetype = archetype
+        }
+        .offset(x: rootPos.x, y: rootPos.y)
+
+        if expanded[archetype] ?? false {
+            subNodes(for: archetype,
+                     rootAngle: rootAngle,
+                     rootPos: rootPos,
+                     subRadius: subRadius)
+        }
+    }
+
+    @ViewBuilder
+    private func subNodes(for archetype: String,
+                          rootAngle: Double,
+                          rootPos: CGPoint,
+                          subRadius: CGFloat) -> some View {
+        let nodes = progressModel.nodes.filter { $0.archetype == archetype }
+        ForEach(Array(nodes.enumerated()), id: \.element.id) { subIndex, node in
+            let arcRange = Double.pi / 2
+            let startAngle = rootAngle - arcRange / 2
+            let angle = startAngle + arcRange * Double(subIndex) / Double(max(nodes.count - 1, 1))
+            let baseX = rootPos.x + subRadius * cos(angle)
+            let baseY = rootPos.y + subRadius * sin(angle)
+            let drag = dragOffsets[node.id] ?? .zero
+            let finalX = baseX + node.offset.width + drag.width
+            let finalY = baseY + node.offset.height + drag.height
+
+            NodeConnectorView(start: rootPos, end: CGPoint(x: finalX, y: finalY))
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+
+            let isNew = newlyAddedIDs.contains(node.id)
+            let isSelected = selectedNodeID == node.id
+            let delay = Double(subIndex) * 0.05
+
+            NodeView(
+                node: node,
+                isNew: isNew,
+                isSelected: isSelected,
+                isMovable: moveMode,
+                appearDelay: delay,
+                onTap: { selectedNodeID = node.id },
+                onEdit: { editNode = node },
+                onDelete: { progressModel.deleteNode(with: node.id) },
+                onDrag: { dragOffsets[node.id] = $0 },
+                onDragEnd: { translation in
+                    let newOffset = CGSize(
+                        width: node.offset.width + translation.width,
+                        height: node.offset.height + translation.height
+                    )
+                    progressModel.updateNodeOffset(id: node.id, offset: newOffset)
+                    dragOffsets[node.id] = .zero
+                },
+                onAppearDone: { newlyAddedIDs.remove(node.id) }
+            )
+            .offset(x: finalX, y: finalY)
+        }
+    }
+
+    private var controlPanel: some View {
+        VStack(spacing: 12) {
+            Button(action: { createNodeArchetype = selectedArchetype }) {
+                Image(systemName: "plus")
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
+
+            if let _ = selectedNodeID {
+                Button(action: { showDeleteConfirm = true }) {
+                    Image(systemName: "trash")
+                        .font(.title2)
+                }
+            }
+
+            Button(action: { moveMode.toggle() }) {
+                Image(systemName: "pencil")
+                    .font(.title2)
+                    .foregroundColor(moveMode ? .yellow : .primary)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        .padding()
+        .transition(.opacity)
     }
 }
 
