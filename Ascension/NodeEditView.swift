@@ -85,6 +85,7 @@ struct NodeEditView: View {
         let trimmedQuote = quote.trimmingCharacters(in: .whitespacesAndNewlines)
         let updated = ArkheionNode(id: nodeID, title: trimmedTitle, archetype: archetype, type: type, prompt: trimmedPrompt, quote: trimmedQuote.isEmpty ? nil : trimmedQuote, status: status)
         progressModel.updateNode(updated)
+        Task { await progressModel.save() }
         dismiss()
     }
 }
