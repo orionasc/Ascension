@@ -27,8 +27,13 @@ struct ArkheionMapView: View {
                     
                     let rootPos = CGPoint(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
 
-                    RootNodeView(archetype: archetype, isExpanded: expanded[archetype] ?? false) {
-                        withAnimation(.spring()) { expanded[archetype]?.toggle() }
+                    RootNodeView(
+                        archetype: archetype,
+                        isExpanded: expanded[archetype] ?? false
+                    ) {
+                        withAnimation(.spring()) {
+                            expanded[archetype]?.toggle()
+                        }
                         selectedArchetype = archetype
                     }
                     .offset(x: rootPos.x, y: rootPos.y)
@@ -48,22 +53,30 @@ struct ArkheionMapView: View {
                             NodeConnectorView(start: rootPos, end: CGPoint(x: finalX, y: finalY))
                                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
 
-                            NodeView(node: node,
-                                    isNew: newlyAddedIDs.contains(node.id),
-                                    isSelected: selectedNodeID == node.id,
-                                    isMovable: moveMode,
-                                    appearDelay: Double(subIndex) * 0.05,
-                                    onTap: { selectedNodeID = node.id },
-                                    onEdit: { editNode = node },
-                                    onDelete: { progressModel.deleteNode(with: node.id) },
-                                    onDrag: { dragOffsets[node.id] = $0 },
-                                    onDragEnd: { translation in
-                                        let newOffset = CGSize(width: node.offset.width + translation.width,
-                                                               height: node.offset.height + translation.height)
-                                        progressModel.updateNodeOffset(id: node.id, offset: newOffset)
-                                        dragOffsets[node.id] = .zero
-                                    },
-                                    onAppearDone: { newlyAddedIDs.remove(node.id) })
+                            let isNew = newlyAddedIDs.contains(node.id)
+                            let isSelected = selectedNodeID == node.id
+                            let delay = Double(subIndex) * 0.05
+
+                            NodeView(
+                                node: node,
+                                isNew: isNew,
+                                isSelected: isSelected,
+                                isMovable: moveMode,
+                                appearDelay: delay,
+                                onTap: { selectedNodeID = node.id },
+                                onEdit: { editNode = node },
+                                onDelete: { progressModel.deleteNode(with: node.id) },
+                                onDrag: { dragOffsets[node.id] = $0 },
+                                onDragEnd: { translation in
+                                    let newOffset = CGSize(
+                                        width: node.offset.width + translation.width,
+                                        height: node.offset.height + translation.height
+                                    )
+                                    progressModel.updateNodeOffset(id: node.id, offset: newOffset)
+                                    dragOffsets[node.id] = .zero
+                                },
+                                onAppearDone: { newlyAddedIDs.remove(node.id) }
+                            )
                             .offset(x: finalX, y: finalY)
                         }
                     }
@@ -151,44 +164,9 @@ private struct NodeView: View {
     @GestureState private var drag: CGSize = .zero
 
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
-                pressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                pressed = false
-            }
-            onTap()
-        }) {
+        Button(action: handleTap) {
             VStack(spacing: 4) {
-                Circle()
-                    .fill(nodeColor.opacity(0.8))
-                    .frame(width: 70, height: 70)
-                    .overlay(
-                        Circle()
-                            .stroke(nodeColor, lineWidth: 4)
-                            .shadow(color: nodeColor.opacity(0.6), radius: 6)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(nodeColor, lineWidth: 6)
-                            .scaleEffect(highlight ? 1.4 : 1.2)
-                            .opacity(highlight ? 0.8 : 0)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.yellow, lineWidth: 4)
-                            .scaleEffect(1.4)
-                            .opacity(isSelected ? 1 : 0)
-                            .shadow(color: Color.yellow.opacity(isSelected ? 0.8 : 0), radius: isSelected ? 6 : 0)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(nodeColor.opacity(isMovable ? 0.5 : 0), lineWidth: 3)
-                            .blur(radius: isMovable ? 4 : 0)
-                    )
-                    .scaleEffect(show ? (pressed || hovering ? 1.1 : 1) : 0.3)
-                    .opacity(show ? 1 : 0)
+                circle
                 Text(node.title)
                     .font(.caption)
                     .foregroundColor(.white)
@@ -226,6 +204,56 @@ private struct NodeView: View {
         }
         .animation(.easeOut(duration: 0.7), value: highlight)
         .nodeContextMenu(onEdit: onEdit, onDelete: onDelete)
+    }
+
+    private func handleTap() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
+            pressed = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            pressed = false
+        }
+        onTap()
+    }
+
+    private var circle: some View {
+        Circle()
+            .fill(nodeColor.opacity(0.8))
+            .frame(width: 70, height: 70)
+            .overlay(
+                Circle()
+                    .stroke(nodeColor, lineWidth: 4)
+                    .shadow(color: nodeColor.opacity(0.6), radius: 6)
+            )
+            .overlay(highlightCircle)
+            .overlay(selectionCircle)
+            .overlay(movableCircle)
+            .scaleEffect(show ? (pressed || hovering ? 1.1 : 1) : 0.3)
+            .opacity(show ? 1 : 0)
+    }
+
+    private var highlightCircle: some View {
+        Circle()
+            .stroke(nodeColor, lineWidth: 6)
+            .scaleEffect(highlight ? 1.4 : 1.2)
+            .opacity(highlight ? 0.8 : 0)
+    }
+
+    private var selectionCircle: some View {
+        Circle()
+            .stroke(Color.yellow, lineWidth: 4)
+            .scaleEffect(1.4)
+            .opacity(isSelected ? 1 : 0)
+            .shadow(
+                color: Color.yellow.opacity(isSelected ? 0.8 : 0),
+                radius: isSelected ? 6 : 0
+            )
+    }
+
+    private var movableCircle: some View {
+        Circle()
+            .stroke(nodeColor.opacity(isMovable ? 0.5 : 0), lineWidth: 3)
+            .blur(radius: isMovable ? 4 : 0)
     }
 
     private var nodeColor: Color {
