@@ -92,11 +92,20 @@ struct AscensionHomeView: View {
                     .padding([.top, .leading, .trailing], 20)
             }
         }
+#if os(macOS)
+        .sheet(isPresented: $showArkheionMap) {
+            NavigationStack {
+                ArkheionMapView()
+            }
+            .frame(minWidth: 600, minHeight: 400)
+        }
+#else
         .fullScreenCover(isPresented: $showArkheionMap) {
             NavigationStack {
                 ArkheionMapView()
             }
         }
+#endif
     }
 
     private var headerAlignment: Alignment {
