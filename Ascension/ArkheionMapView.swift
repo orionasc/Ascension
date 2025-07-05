@@ -4,6 +4,12 @@ struct ArkheionMapView: View {
     @EnvironmentObject private var progressModel: ArkheionProgressModel
     @Environment(\.dismiss) private var dismiss
     @State private var editNode: ArkheionNode?
+    @State private var createNodeArchetype: String?
+    @State private var selectedArchetype: String = "Scholar"
+    @State private var selectedNodeID: UUID?
+    @State private var moveMode = false
+    @State private var dragOffsets: [UUID: CGSize] = [:]
+    @State private var showDeleteConfirm = false
 
     private let archetypes = ["Scholar", "Sage", "Sovereign"]
     @State private var expanded: [String: Bool] = ["Scholar": false, "Sage": false, "Sovereign": false]
@@ -18,11 +24,14 @@ struct ArkheionMapView: View {
             ZStack {
                 ForEach(Array(archetypes.enumerated()), id: \.element) { index, archetype in
                     let rootAngle = Double(index) / Double(archetypes.count) * 2 * .pi
+                    
+                    let rootPos = CGPoint(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
 
                     RootNodeView(archetype: archetype, isExpanded: expanded[archetype] ?? false) {
                         withAnimation(.spring()) { expanded[archetype]?.toggle() }
+                        selectedArchetype = archetype
                     }
-                    .offset(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
+                    .offset(x: rootPos.x, y: rootPos.y)
 
                     if expanded[archetype] ?? false {
                         let nodes = progressModel.nodes.filter { $0.archetype == archetype }
@@ -30,20 +39,63 @@ struct ArkheionMapView: View {
                             let arcRange = Double.pi / 2
                             let startAngle = rootAngle - arcRange / 2
                             let angle = startAngle + arcRange * Double(subIndex) / Double(max(nodes.count - 1, 1))
+                            let baseX = rootPos.x + subRadius * cos(angle)
+                            let baseY = rootPos.y + subRadius * sin(angle)
+                            let drag = dragOffsets[node.id] ?? .zero
+                            let finalX = baseX + node.offset.width + drag.width
+                            let finalY = baseY + node.offset.height + drag.height
+
+                            NodeConnectorView(start: rootPos, end: CGPoint(x: finalX, y: finalY))
+                                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+
                             NodeView(node: node,
                                     isNew: newlyAddedIDs.contains(node.id),
+                                    isSelected: selectedNodeID == node.id,
+                                    isMovable: moveMode,
                                     appearDelay: Double(subIndex) * 0.05,
-                                    onTap: { print(node.title) },
+                                    onTap: { selectedNodeID = node.id },
                                     onEdit: { editNode = node },
                                     onDelete: { progressModel.deleteNode(with: node.id) },
+                                    onDrag: { dragOffsets[node.id] = $0 },
+                                    onDragEnd: { translation in
+                                        let newOffset = CGSize(width: node.offset.width + translation.width,
+                                                               height: node.offset.height + translation.height)
+                                        progressModel.updateNodeOffset(id: node.id, offset: newOffset)
+                                        dragOffsets[node.id] = .zero
+                                    },
                                     onAppearDone: { newlyAddedIDs.remove(node.id) })
-                            .offset(x: radius * cos(rootAngle) + subRadius * cos(angle),
-                                    y: radius * sin(rootAngle) + subRadius * sin(angle))
+                            .offset(x: finalX, y: finalY)
                         }
                     }
                 }
 
                 HeartSun()
+
+                VStack(spacing: 12) {
+                    Button(action: { createNodeArchetype = selectedArchetype }) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                    }
+                    .buttonStyle(.plain)
+
+                    if let selected = selectedNodeID {
+                        Button(action: { showDeleteConfirm = true }) {
+                            Image(systemName: "trash")
+                                .font(.title2)
+                        }
+                    }
+
+                    Button(action: { moveMode.toggle() }) {
+                        Image(systemName: "pencil")
+                            .font(.title2)
+                            .foregroundColor(moveMode ? .yellow : .primary)
+                    }
+                }
+                .padding()
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding()
+                .transition(.opacity)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -54,8 +106,20 @@ struct ArkheionMapView: View {
                 }
             }
         }
+        .sheet(item: $createNodeArchetype) { archetype in
+            NodeCreationView(archetype: archetype)
+        }
         .sheet(item: $editNode) { node in
             NodeEditView(node: node)
+        }
+        .alert("Delete this node?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                if let id = selectedNodeID {
+                    progressModel.deleteNode(with: id)
+                    selectedNodeID = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .onChange(of: progressModel.nodes) { nodes in
             let ids = Set(nodes.map(\.id))
@@ -69,10 +133,14 @@ struct ArkheionMapView: View {
 private struct NodeView: View {
     var node: ArkheionNode
     var isNew: Bool = false
+    var isSelected: Bool = false
+    var isMovable: Bool = false
     var appearDelay: Double = 0
     var onTap: () -> Void
     var onEdit: () -> Void
     var onDelete: () -> Void
+    var onDrag: (CGSize) -> Void = { _ in }
+    var onDragEnd: (CGSize) -> Void = { _ in }
     var onAppearDone: () -> Void = {}
 
     @State private var pressed = false
@@ -80,6 +148,7 @@ private struct NodeView: View {
     @State private var appeared = false
     @State private var highlight = false
     @State private var show = false
+    @GestureState private var drag: CGSize = .zero
 
     var body: some View {
         Button(action: {
@@ -106,6 +175,18 @@ private struct NodeView: View {
                             .scaleEffect(highlight ? 1.4 : 1.2)
                             .opacity(highlight ? 0.8 : 0)
                     )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.yellow, lineWidth: 4)
+                            .scaleEffect(1.4)
+                            .opacity(isSelected ? 1 : 0)
+                            .shadow(color: Color.yellow.opacity(isSelected ? 0.8 : 0), radius: isSelected ? 6 : 0)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(nodeColor.opacity(isMovable ? 0.5 : 0), lineWidth: 3)
+                            .blur(radius: isMovable ? 4 : 0)
+                    )
                     .scaleEffect(show ? (pressed || hovering ? 1.1 : 1) : 0.3)
                     .opacity(show ? 1 : 0)
                 Text(node.title)
@@ -117,6 +198,18 @@ private struct NodeView: View {
 #if os(macOS)
         .onHover { hovering = $0 }
 #endif
+        .offset(drag)
+        .gesture(
+            isMovable ? DragGesture()
+                .updating($drag) { value, state, _ in
+                    state = value.translation
+                    onDrag(value.translation)
+                }
+                .onEnded { value in
+                    onDragEnd(value.translation)
+                }
+            : nil
+        )
         .onAppear {
             guard !appeared else { return }
             appeared = true

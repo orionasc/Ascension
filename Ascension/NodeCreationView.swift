@@ -18,6 +18,10 @@ struct NodeCreationView: View {
         "Wisdom lights the path forward."
     ]
 
+    init(archetype: String = "Scholar") {
+        _archetype = State(initialValue: archetype)
+    }
+
     private var accentColor: Color {
         switch archetype {
         case "Scholar": return .blue
@@ -88,7 +92,8 @@ struct NodeCreationView: View {
             type: type,
             prompt: trimmedPrompt,
             quote: finalQuote.isEmpty ? nil : finalQuote,
-            status: status
+            status: status,
+            offset: .zero
         )
         progressModel.addNode(newNode)
         dismiss()

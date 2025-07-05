@@ -10,6 +10,7 @@ struct NodeEditView: View {
     @State private var prompt: String
     @State private var quote: String
     @State private var status: ArkheionNodeStatus
+    @State private var offset: CGSize
 
     private let nodeID: UUID
     private let archetypes = ["Scholar", "Sage", "Sovereign"]
@@ -21,6 +22,7 @@ struct NodeEditView: View {
         _prompt = State(initialValue: node.prompt)
         _quote = State(initialValue: node.quote ?? "")
         _status = State(initialValue: node.status)
+        _offset = State(initialValue: node.offset)
         nodeID = node.id
     }
 
@@ -83,7 +85,7 @@ struct NodeEditView: View {
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty, !trimmedPrompt.isEmpty else { return }
         let trimmedQuote = quote.trimmingCharacters(in: .whitespacesAndNewlines)
-        let updated = ArkheionNode(id: nodeID, title: trimmedTitle, archetype: archetype, type: type, prompt: trimmedPrompt, quote: trimmedQuote.isEmpty ? nil : trimmedQuote, status: status)
+        let updated = ArkheionNode(id: nodeID, title: trimmedTitle, archetype: archetype, type: type, prompt: trimmedPrompt, quote: trimmedQuote.isEmpty ? nil : trimmedQuote, status: status, offset: offset)
         progressModel.updateNode(updated)
         Task { await progressModel.save() }
         dismiss()
