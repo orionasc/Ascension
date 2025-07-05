@@ -45,7 +45,7 @@ struct ArkheionMapView: View {
             let radius = min(geo.size.width, geo.size.height) * 0.35
             let subRadius = radius * 0.6
 
-            let drag = DragGesture(minimumDistance: 1)
+            let drag = DragGesture(minimumDistance: 0)
                 .updating($dragTranslation) { value, state, _ in
                     state = value.translation
                 }
@@ -73,6 +73,7 @@ struct ArkheionMapView: View {
                     }
                     HeartSun()
                 }
+                .frame(width: geo.size.width, height: geo.size.height)
                 .contentShape(Rectangle())
                 .scaleEffect(zoom)
                 .offset(
@@ -94,6 +95,8 @@ struct ArkheionMapView: View {
                     RadialNavMenuItem(icon: "sun.max") {},
                     RadialNavMenuItem(icon: "shield") {}
                 ])
+                .frame(maxWidth: .infinity, alignment: .top)
+                .padding(.top, 10)
 
                 SidebarControls(
                     zoomIn: { zoom = min(zoom + 0.2, 2.5) },
@@ -268,11 +271,13 @@ struct ArkheionMapView: View {
                 Image(systemName: "pencil")
                     .font(.title2)
                     .foregroundColor(moveMode ? .yellow : .primary)
+                    .shadow(color: moveMode ? .yellow.opacity(0.7) : .clear,
+                            radius: moveMode ? 5 : 0)
             }
         }
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .padding()
         .transition(.opacity)
     }
@@ -337,7 +342,7 @@ private struct NodeView: View {
 #endif
         .offset(drag)
         .gesture(
-            isMovable ? DragGesture()
+            isMovable ? DragGesture(minimumDistance: 0)
                 .updating($drag) { value, state, _ in
                     state = value.translation
                     onDrag(value.translation)
