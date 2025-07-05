@@ -80,7 +80,7 @@ struct AscensionHomeView: View {
                     }
 
                 if showQuote {
-                    Text("\u201cReflection is ignition.\u201d")
+                    Text("\u{201c}Reflection is ignition.\u{201d}")
                         .padding()
                         .background(Color.black.opacity(0.6))
                         .cornerRadius(12)
