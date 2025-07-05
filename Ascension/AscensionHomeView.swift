@@ -35,20 +35,16 @@ struct AscensionHomeView: View {
 
                 // 3. Orbiting modules
                 ForEach(modules) { module in
-                    Button {
-                        print("\(module.name) tapped")
-                    } label: {
-                        Circle()
-                            .fill(Color.white.opacity(module.active ? 0.2 : 0.08))
-                            .frame(width: 70, height: 70)
-                            .overlay(
-                                Circle()
-                                    .stroke(module.active ? Color.orange : Color.clear, lineWidth: 3)
-                            )
-                            .overlay(
-                                Image(systemName: module.systemImage)
-                                    .foregroundColor(.white.opacity(module.active ? 1 : 0.5))
-                            )
+                    ModuleButtonView(
+                        icon: module.systemImage,
+                        label: module.name,
+                        active: module.active
+                    ) {
+                        if module.active {
+                            print("\(module.name) launched")
+                        } else {
+                            print("Locked")
+                        }
                     }
                     .offset(
                         x: radius * cos(module.angle),
