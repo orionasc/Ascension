@@ -45,7 +45,7 @@ struct ArkheionMapView: View {
             let radius = min(geo.size.width, geo.size.height) * 0.35
             let subRadius = radius * 0.6
 
-            let drag = DragGesture()
+            let drag = DragGesture(minimumDistance: 1)
                 .updating($dragTranslation) { value, state, _ in
                     state = value.translation
                 }
@@ -54,17 +54,16 @@ struct ArkheionMapView: View {
                     canvasOffset.height += value.translation.height
                 }
 
-            ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.32, green: 0.18, blue: 0.10),
-                        Color(red: 0.26, green: 0.26, blue: 0.28)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+            let gradient = LinearGradient(
+                gradient: Gradient(colors: [
+                    Color(red: 0.32, green: 0.18, blue: 0.10),
+                    Color(red: 0.26, green: 0.26, blue: 0.28)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
+            ZStack(alignment: .top) {
                 ZStack {
                     connectionLines
                     rootNodes(radius: radius, subRadius: subRadius)
@@ -74,12 +73,17 @@ struct ArkheionMapView: View {
                     }
                     HeartSun()
                 }
+                .contentShape(Rectangle())
                 .scaleEffect(zoom)
                 .offset(
                     x: canvasOffset.width + dragTranslation.width,
                     y: canvasOffset.height + dragTranslation.height
                 )
+#if os(macOS)
+                .gesture(drag)
+#else
                 .gesture(dragModeActive ? drag : nil)
+#endif
 
                 controlPanel
 
@@ -93,12 +97,14 @@ struct ArkheionMapView: View {
 
                 SidebarControls(
                     zoomIn: { zoom = min(zoom + 0.2, 2.5) },
-                    zoomOut: { zoom = max(zoom - 0.2, 0.7) },
+                    zoomOut: { zoom = max(zoom - 0.2, 0.6) },
                     dragMode: dragModeActive,
                     toggleDragMode: { dragModeActive.toggle() }
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(gradient)
+            .ignoresSafeArea()
         }
         .toolbar {
             ToolbarItem(placement: .navigation) {
