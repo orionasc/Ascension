@@ -450,9 +450,11 @@ private struct RootNodeView: View {
                         .shadow(color: color.opacity(0.6), radius: isExpanded ? 8 : 6)
                 )
                 .overlay(
-                    Text(String(archetype.prefix(1)))
+                    Text(archetype)
                         .font(.headline)
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                 )
         }
         .buttonStyle(.plain)
