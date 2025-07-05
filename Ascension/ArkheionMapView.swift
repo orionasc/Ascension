@@ -73,7 +73,7 @@ struct ArkheionMapView: View {
 
     @ViewBuilder
     private var connectionLines: some View {
-        ForEach(progressModel.connections, id: .id) { connection in
+        ForEach(progressModel.connections, id: \.id) { connection in
             if let from = nodePositions[connection.from],
                let to = nodePositions[connection.to] {
                 NodeConnector(start: from, end: to)
@@ -136,7 +136,9 @@ struct ArkheionMapView: View {
             let drag = dragOffsets[node.id] ?? .zero
             let finalX = baseX + node.offset.width + drag.width
             let finalY = baseY + node.offset.height + drag.height
-            nodePositions[node.id] = CGPoint(x: finalX, y: finalY)
+            DispatchQueue.main.async {
+                nodePositions[node.id] = CGPoint(x: finalX, y: finalY)
+            }
 
             NodeConnector(start: rootPos, end: CGPoint(x: finalX, y: finalY))
                 .stroke(Color.white.opacity(0.3), lineWidth: 1)
