@@ -23,8 +23,9 @@ struct ArkheionNode: Identifiable, Codable, Equatable {
     var prompt: String
     var quote: String?
     var status: ArkheionNodeStatus
+    var offset: CGSize
 
-    init(id: UUID = UUID(), title: String, archetype: String, type: ArkheionNodeType, prompt: String, quote: String? = nil, status: ArkheionNodeStatus = .dormant) {
+    init(id: UUID = UUID(), title: String, archetype: String, type: ArkheionNodeType, prompt: String, quote: String? = nil, status: ArkheionNodeStatus = .dormant, offset: CGSize = .zero) {
         self.id = id
         self.title = title
         self.archetype = archetype
@@ -32,6 +33,7 @@ struct ArkheionNode: Identifiable, Codable, Equatable {
         self.prompt = prompt
         self.quote = quote
         self.status = status
+        self.offset = offset
     }
 }
 
@@ -80,6 +82,13 @@ final class ArkheionProgressModel: ObservableObject {
     func updateNode(_ node: ArkheionNode) {
         if let index = nodes.firstIndex(where: { $0.id == node.id }) {
             nodes[index] = node
+            Task { await save() }
+        }
+    }
+
+    func updateNodeOffset(id: UUID, offset: CGSize) {
+        if let index = nodes.firstIndex(where: { $0.id == id }) {
+            nodes[index].offset = offset
             Task { await save() }
         }
     }
