@@ -19,7 +19,7 @@ struct NodeConnectorView: View {
             let radius = min(size.width, size.height) / 2
             let centerLocal = CGPoint(x: size.width / 2, y: size.height / 2)
 
-            ForEach(0..<8, id: .self) { index in
+            ForEach(0..<8, id: \.self) { index in
                 let angle = Double(index) * .pi / 4
                 let offset = CGSize(width: radius * cos(angle),
                                     height: radius * sin(angle))
