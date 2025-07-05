@@ -17,6 +17,7 @@ struct AscensionHomeView: View {
 
     @State private var showQuote = false
     @State private var showArkheionMap = false
+    @EnvironmentObject private var progressModel: ArkheionProgressModel
 
     var body: some View {
         GeometryReader { geo in
@@ -92,20 +93,12 @@ struct AscensionHomeView: View {
                     .padding([.top, .leading, .trailing], 20)
             }
         }
-#if os(macOS)
-        .sheet(isPresented: $showArkheionMap) {
+        .mapPresentation(isPresented: $showArkheionMap) {
             NavigationStack {
                 ArkheionMapView()
             }
-            .frame(minWidth: 600, minHeight: 400)
+            .environmentObject(progressModel)
         }
-#else
-        .fullScreenCover(isPresented: $showArkheionMap) {
-            NavigationStack {
-                ArkheionMapView()
-            }
-        }
-#endif
     }
 
     private var headerAlignment: Alignment {
@@ -119,5 +112,36 @@ struct AscensionHomeView: View {
 
 #Preview {
     AscensionHomeView()
+        .environmentObject(ArkheionProgressModel())
 }
+
+#if os(macOS)
+extension View {
+    @ViewBuilder
+    func mapPresentation<Content: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        if #available(macOS 13.0, *) {
+            fullScreenCover(isPresented: isPresented, content: content)
+        } else {
+            sheet(isPresented: isPresented) {
+                content()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea()
+            }
+        }
+    }
+}
+#else
+extension View {
+    @ViewBuilder
+    func mapPresentation<Content: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        fullScreenCover(isPresented: isPresented, content: content)
+    }
+}
+#endif
 
