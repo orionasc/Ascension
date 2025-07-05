@@ -1,31 +1,22 @@
 import SwiftUI
 
 struct ArkheionMapView: View {
-    struct Node: Identifiable {
-        let id = UUID()
-        var name: String
-        var color: Color
-        var angle: Double
-    }
-
-    private let nodes: [Node] = [
-        Node(name: "Scholar", color: .blue, angle: 0),
-        Node(name: "Sage", color: Color(red: 0.83, green: 0.67, blue: 0.22), angle: 2 * .pi / 3),
-        Node(name: "Sovereign", color: Color(red: 0.80, green: 0.34, blue: 0.08), angle: 4 * .pi / 3)
-    ]
-
+    @EnvironmentObject private var progressModel: ArkheionProgressModel
     @Environment(\.dismiss) private var dismiss
+    @State private var editNode: ArkheionNode?
 
     var body: some View {
         GeometryReader { geo in
             let radius = min(geo.size.width, geo.size.height) * 0.35
 
             ZStack {
-                ForEach(nodes) { node in
-                    NodeView(node: node) {
-                        print(node.name)
-                    }
-                    .offset(x: radius * cos(node.angle), y: radius * sin(node.angle))
+                ForEach(Array(progressModel.nodes.enumerated()), id: \.element.id) { index, node in
+                    let angle = Double(index) / Double(max(progressModel.nodes.count, 1)) * 2 * .pi
+                    NodeView(node: node,
+                            onTap: { print(node.title) },
+                            onEdit: { editNode = node },
+                            onDelete: { progressModel.deleteNode(with: node.id) })
+                    .offset(x: radius * cos(angle), y: radius * sin(angle))
                 }
 
                 HeartSun()
@@ -39,12 +30,17 @@ struct ArkheionMapView: View {
                 }
             }
         }
+        .sheet(item: $editNode) { node in
+            NodeEditView(node: node)
+        }
     }
 }
 
 private struct NodeView: View {
-    var node: ArkheionMapView.Node
-    var action: () -> Void
+    var node: ArkheionNode
+    var onTap: () -> Void
+    var onEdit: () -> Void
+    var onDelete: () -> Void
 
     @State private var pressed = false
     @State private var hovering = false
@@ -57,19 +53,19 @@ private struct NodeView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 pressed = false
             }
-            action()
+            onTap()
         }) {
             VStack(spacing: 4) {
                 Circle()
-                    .fill(node.color.opacity(0.8))
+                    .fill(nodeColor.opacity(0.8))
                     .frame(width: 70, height: 70)
                     .overlay(
                         Circle()
-                            .stroke(node.color, lineWidth: 4)
-                            .shadow(color: node.color.opacity(0.6), radius: 6)
+                            .stroke(nodeColor, lineWidth: 4)
+                            .shadow(color: nodeColor.opacity(0.6), radius: 6)
                     )
                     .scaleEffect(pressed || hovering ? 1.1 : 1)
-                Text(node.name)
+                Text(node.title)
                     .font(.caption)
                     .foregroundColor(.white)
             }
@@ -78,6 +74,16 @@ private struct NodeView: View {
 #if os(macOS)
         .onHover { hovering = $0 }
 #endif
+        .nodeContextMenu(onEdit: onEdit, onDelete: onDelete)
+    }
+
+    private var nodeColor: Color {
+        switch node.archetype {
+        case "Scholar": return .blue
+        case "Sage": return Color(red: 0.83, green: 0.67, blue: 0.22)
+        case "Sovereign": return Color(red: 0.80, green: 0.34, blue: 0.08)
+        default: return .accentColor
+        }
     }
 }
 
@@ -99,4 +105,5 @@ private struct HeartSun: View {
 
 #Preview {
     ArkheionMapView()
+        .environmentObject(ArkheionProgressModel())
 }
