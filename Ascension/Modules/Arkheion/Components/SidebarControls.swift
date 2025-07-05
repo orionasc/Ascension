@@ -3,14 +3,11 @@ import SwiftUI
 struct SidebarControls: View {
     var zoomIn: () -> Void
     var zoomOut: () -> Void
-    var dragMode: Bool
-    var toggleDragMode: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
             controlButton(icon: "plus", action: zoomIn)
             controlButton(icon: "minus", action: zoomOut)
-            controlButton(icon: "hand.draw", action: toggleDragMode, active: dragMode)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -36,7 +33,7 @@ struct SidebarControls: View {
 #if DEBUG
 struct SidebarControls_Previews: PreviewProvider {
     static var previews: some View {
-        SidebarControls(zoomIn: {}, zoomOut: {}, dragMode: true, toggleDragMode: {})
+        SidebarControls(zoomIn: {}, zoomOut: {})
     }
 }
 #endif
