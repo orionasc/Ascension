@@ -54,7 +54,7 @@ struct ArkheionMapView: View {
                         y: offset.height + dragTranslation.height)
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
-            .frame(width: geo.size.width, height: geo.size.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .overlay(gridToggleButton, alignment: .topTrailing)
         }
@@ -133,8 +133,8 @@ struct BackgroundLayer: View {
                 )
                 .blendMode(.screen)
             }
-            .ignoresSafeArea()
         }
+        .ignoresSafeArea()
     }
 }
 
