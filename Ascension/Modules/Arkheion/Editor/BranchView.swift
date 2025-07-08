@@ -9,14 +9,21 @@ struct BranchView: View {
     @State private var selectedNode: Node?
 
     var body: some View {
-        let pathLength = ringRadius + CGFloat(branch.nodes.count + 1) * 60
+        // Distance for the branch line extending past the ring
+        let pathLength = CGFloat(branch.nodes.count + 1) * 60
+
+        // Starting point of the branch at the ring's edge
+        let origin = CGPoint(
+            x: center.x + cos(branch.angle) * ringRadius,
+            y: center.y + sin(branch.angle) * ringRadius
+        )
 
         ZStack {
             Path { path in
-                path.move(to: center)
+                path.move(to: origin)
                 let end = CGPoint(
-                    x: center.x + cos(branch.angle) * pathLength,
-                    y: center.y + sin(branch.angle) * pathLength
+                    x: origin.x + cos(branch.angle) * pathLength,
+                    y: origin.y + sin(branch.angle) * pathLength
                 )
                 path.addLine(to: end)
             }
