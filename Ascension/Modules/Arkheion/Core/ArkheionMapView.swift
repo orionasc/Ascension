@@ -249,6 +249,11 @@ struct ArkheionMapView: View {
 
     // MARK: - Tap Handling
     private func handleTap(_ location: CGPoint, in geo: GeometryProxy) {
+        if let branchID = hitBranch(at: location, in: geo) {
+            selectedBranchID = branchID
+            selectedNodeID = nil
+            return
+        }
         guard let ringIndex = nearestRingIndex(to: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
         onRingTapped(ringIndex: ringIndex)
@@ -282,6 +287,44 @@ struct ArkheionMapView: View {
                 highlightedRingIndex = nil
             }
         }
+    }
+
+    private func hitBranch(at location: CGPoint, in geo: GeometryProxy) -> UUID? {
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let currentZoom = zoom * gestureZoom
+        var point = location
+        point.x -= offset.width + dragTranslation.width
+        point.y -= offset.height + dragTranslation.height
+        point.x = center.x + (point.x - center.x) / currentZoom
+        point.y = center.y + (point.y - center.y) / currentZoom
+
+        for branch in branches {
+            guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
+            let origin = CGPoint(
+                x: center.x + cos(branch.angle) * ring.radius,
+                y: center.y + sin(branch.angle) * ring.radius
+            )
+            let length = CGFloat(branch.nodes.count + 1) * 60
+            let end = CGPoint(
+                x: origin.x + cos(branch.angle) * length,
+                y: origin.y + sin(branch.angle) * length
+            )
+            if distance(from: point, toSegment: origin, end: end) <= 20 {
+                return branch.id
+            }
+        }
+        return nil
+    }
+
+    private func distance(from point: CGPoint, toSegment start: CGPoint, end: CGPoint) -> CGFloat {
+        let dx = end.x - start.x
+        let dy = end.y - start.y
+        let lengthSquared = dx * dx + dy * dy
+        if lengthSquared == 0 { return hypot(point.x - start.x, point.y - start.y) }
+        var t = ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared
+        t = max(0, min(1, t))
+        let proj = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
+        return hypot(point.x - proj.x, point.y - proj.y)
     }
 }
 

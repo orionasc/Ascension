@@ -75,6 +75,8 @@ struct BranchView: View {
                           y: center.y + sin(branch.angle) * ringRadius)
                 .onTapGesture { onAddNode() }
         }
+        .contentShape(Rectangle())
+        .zIndex(1)
     }
 }
 
