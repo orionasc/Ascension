@@ -37,6 +37,7 @@ struct GridOverlayView: View {
             }
             .drawingGroup()
         }
+        .ignoresSafeArea()
     }
 }
 
