@@ -12,7 +12,9 @@ struct Ring: Identifiable {
 struct RingView: View {
     var ring: Ring
     var center: CGPoint
-    var onRingTapped: (Int) -> Void = { _ in }
+    var onTap: (Int) -> Void = { _ in }
+    var onLongPress: (Int) -> Void = { _ in }
+    var onDoubleTap: (Int) -> Void = { _ in }
 
     private var strokeColor: Color {
         ring.locked ? Color.white.opacity(0.2) : Color.white.opacity(0.4)
@@ -24,8 +26,14 @@ struct RingView: View {
             .frame(width: ring.radius * 2, height: ring.radius * 2)
             .position(x: center.x, y: center.y)
             .shadow(color: ring.locked ? .clear : Color.white.opacity(0.5), radius: ring.locked ? 0 : 4)
+            .onTapGesture(count: 2) {
+                onDoubleTap(ring.ringIndex)
+            }
             .onTapGesture {
-                onRingTapped(ring.ringIndex)
+                onTap(ring.ringIndex)
+            }
+            .onLongPressGesture {
+                onLongPress(ring.ringIndex)
             }
     }
 }

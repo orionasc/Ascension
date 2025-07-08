@@ -6,11 +6,14 @@ import SwiftUI
 struct ArkheionMapView: View {
 
     /// Sample ring data. Later this will be loaded from persistent storage.
-    private let rings: [Ring] = [
+    @State private var rings: [Ring] = [
         Ring(ringIndex: 0, radius: 180, locked: false),
         Ring(ringIndex: 1, radius: 260, locked: true),
         Ring(ringIndex: 2, radius: 340, locked: true)
     ]
+
+    @State private var branches: [Branch] = []
+    @State private var editingRingIndex: Int?
 
     // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
@@ -40,13 +43,23 @@ struct ArkheionMapView: View {
                             .frame(width: 140, height: 140)
                             .position(center)
 
-                        ForEach(rings) { ring in
-                            RingView(ring: ring, center: center) { index in
-                                onRingTapped(ringIndex: index)
-                            }
+                        ForEach($rings) { $ring in
+                            RingView(
+                                ring: ring,
+                                center: center,
+                                onTap: { index in onRingTapped(ringIndex: index) },
+                                onLongPress: { index in toggleLock(for: index) },
+                                onDoubleTap: { index in editingRingIndex = index }
+                            )
                         }
 
-                        // Placeholder: branches and node layers will follow
+                        ForEach($branches) { $branch in
+                            if let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) {
+                                BranchView(branch: $branch, center: center, ringRadius: ring.radius) {
+                                    addNode(to: branch.id)
+                                }
+                            }
+                        }
                     }
                 }
                 .scaleEffect(currentZoom)
@@ -57,6 +70,12 @@ struct ArkheionMapView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .overlay(gridToggleButton, alignment: .topTrailing)
+            .overlay(addRingButton, alignment: .bottomTrailing)
+            .sheet(item: $editingRingIndex) { index in
+                if let i = index, let binding = bindingForRing(i) {
+                    RingEditorView(ring: binding)
+                }
+            }
         }
     }
 
@@ -97,11 +116,47 @@ struct ArkheionMapView: View {
         .padding()
     }
 
+    private var addRingButton: some View {
+        Button(action: addRing) {
+            Image(systemName: "plus")
+                .font(.title2)
+                .padding(8)
+                .background(Color.black.opacity(0.4))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .padding()
+    }
+
     // MARK: - Interaction
 
     private func onRingTapped(ringIndex: Int) {
-        // Placeholder for branch anchor creation
-        print("Ring \(ringIndex) tapped")
+        guard let ring = rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
+        let angle = Double.random(in: 0..<(2 * .pi))
+        let branch = Branch(ringIndex: ringIndex, angle: angle)
+        branches.append(branch)
+    }
+
+    private func toggleLock(for ringIndex: Int) {
+        if let index = rings.firstIndex(where: { $0.ringIndex == ringIndex }) {
+            rings[index].locked.toggle()
+        }
+    }
+
+    private func bindingForRing(_ index: Int) -> Binding<Ring>? {
+        guard let idx = rings.firstIndex(where: { $0.ringIndex == index }) else { return nil }
+        return $rings[idx]
+    }
+
+    private func addRing() {
+        let nextIndex = (rings.map { $0.ringIndex }.max() ?? 0) + 1
+        let baseRadius = (rings.map { $0.radius }.max() ?? 100) + 80
+        rings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
+    }
+
+    private func addNode(to branchID: UUID) {
+        guard let index = branches.firstIndex(where: { $0.id == branchID }) else { return }
+        branches[index].nodes.append(Node())
     }
 }
 
