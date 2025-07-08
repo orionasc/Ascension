@@ -4,7 +4,6 @@ import SwiftUI
 /// space layer while keeping compatibility with existing data models. Future
 /// versions will layer rings, branches and nodes on top of this canvas.
 struct ArkheionMapView: View {
-    @EnvironmentObject private var progressModel: ArkheionProgressModel
 
     // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
@@ -182,7 +181,6 @@ struct GridOverlayView: View {
 struct ArkheionMapView_Previews: PreviewProvider {
     static var previews: some View {
         ArkheionMapView()
-            .environmentObject(ArkheionProgressModel())
     }
 }
 #endif
