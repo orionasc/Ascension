@@ -72,9 +72,15 @@ struct ArkheionMapView: View {
             .ignoresSafeArea()
             .overlay(gridToggleButton, alignment: .topTrailing)
             .overlay(addRingButton, alignment: .bottomTrailing)
-            .sheet(item: $editingRing) { target in
-                if let binding = bindingForRing(target.ringIndex) {
-                    RingEditorView(ring: binding)
+            .overlay(alignment: .top) {
+                if let target = editingRing,
+                   let binding = bindingForRing(target.ringIndex) {
+                    FloatingRingEditorView(
+                        ring: binding,
+                        progress: progress(for: target.ringIndex),
+                        onBack: { editingRing = nil }
+                    )
+                    .padding(.top, 20)
                 }
             }
         }
@@ -158,6 +164,15 @@ struct ArkheionMapView: View {
     private func addNode(to branchID: UUID) {
         guard let index = branches.firstIndex(where: { $0.id == branchID }) else { return }
         branches[index].nodes.append(Node())
+    }
+
+    /// Calculates completion progress for a ring based on nodes finished.
+    private func progress(for ringIndex: Int) -> Double {
+        let ringBranches = branches.filter { $0.ringIndex == ringIndex }
+        let nodes = ringBranches.flatMap { $0.nodes }
+        guard !nodes.isEmpty else { return 0 }
+        let completed = nodes.filter { $0.completed }.count
+        return Double(completed) / Double(nodes.count)
     }
 }
 
