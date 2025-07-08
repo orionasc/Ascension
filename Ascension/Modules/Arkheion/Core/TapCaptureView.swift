@@ -80,15 +80,19 @@ private struct Representable: NSViewRepresentable {
         let view = NSView()
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.clear.cgColor
+
         let single = NSClickGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         single.numberOfClicksRequired = 1
+
         let double = NSClickGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
         double.numberOfClicksRequired = 2
+
         let press = NSPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress(_:)))
-        single.require(toFail: double)
+
         view.addGestureRecognizer(single)
         view.addGestureRecognizer(double)
         view.addGestureRecognizer(press)
+
         return view
     }
 
