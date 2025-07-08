@@ -13,7 +13,8 @@ struct ArkheionMapView: View {
     ]
 
     @State private var branches: [Branch] = []
-    @State private var editingRingIndex: Int?
+    /// Holds the ring currently being edited.
+    @State private var editingRing: RingEditTarget?
 
     // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
@@ -49,7 +50,7 @@ struct ArkheionMapView: View {
                                 center: center,
                                 onTap: { index in onRingTapped(ringIndex: index) },
                                 onLongPress: { index in toggleLock(for: index) },
-                                onDoubleTap: { index in editingRingIndex = index }
+                                onDoubleTap: { index in editingRing = RingEditTarget(ringIndex: index) }
                             )
                         }
 
@@ -71,8 +72,8 @@ struct ArkheionMapView: View {
             .ignoresSafeArea()
             .overlay(gridToggleButton, alignment: .topTrailing)
             .overlay(addRingButton, alignment: .bottomTrailing)
-            .sheet(item: $editingRingIndex) { index in
-                if let i = index, let binding = bindingForRing(i) {
+            .sheet(item: $editingRing) { target in
+                if let binding = bindingForRing(target.ringIndex) {
                     RingEditorView(ring: binding)
                 }
             }
