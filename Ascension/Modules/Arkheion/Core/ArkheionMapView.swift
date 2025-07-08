@@ -16,6 +16,11 @@ struct ArkheionMapView: View {
     /// Holds the ring currently being edited.
     @State private var editingRing: RingEditTarget?
 
+    /// Currently selected elements for the editor toolbar
+    @State private var selectedRingIndex: Int?
+    @State private var selectedBranchID: UUID?
+    @State private var selectedNodeID: UUID?
+
     // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
     @State private var offset: CGSize = .zero
@@ -83,6 +88,20 @@ struct ArkheionMapView: View {
                     .padding(.top, 20)
                 }
             }
+            .overlay(alignment: .trailing) {
+                EditorToolbarView(
+                    rings: $rings,
+                    branches: $branches,
+                    selectedRingIndex: $selectedRingIndex,
+                    selectedBranchID: $selectedBranchID,
+                    selectedNodeID: $selectedNodeID,
+                    addRing: addRing,
+                    unlockAllRings: unlockAllRings,
+                    createBranch: createBranch,
+                    addNode: addNodeFromToolbar
+                )
+                .padding(.trailing, 8)
+            }
         }
     }
 
@@ -138,10 +157,14 @@ struct ArkheionMapView: View {
     // MARK: - Interaction
 
     private func onRingTapped(ringIndex: Int) {
+        selectedRingIndex = ringIndex
+        selectedBranchID = nil
+        selectedNodeID = nil
         guard let ring = rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
         let angle = Double.random(in: 0..<(2 * .pi))
         let branch = Branch(ringIndex: ringIndex, angle: angle)
         branches.append(branch)
+        selectedBranchID = branch.id
     }
 
     private func toggleLock(for ringIndex: Int) {
@@ -164,6 +187,25 @@ struct ArkheionMapView: View {
     private func addNode(to branchID: UUID) {
         guard let index = branches.firstIndex(where: { $0.id == branchID }) else { return }
         branches[index].nodes.append(Node())
+    }
+
+    private func unlockAllRings() {
+        for index in rings.indices {
+            rings[index].locked = false
+        }
+    }
+
+    private func createBranch() {
+        guard let ringIndex = selectedRingIndex else { return }
+        let angle = Double.random(in: 0..<(2 * .pi))
+        let branch = Branch(ringIndex: ringIndex, angle: angle)
+        branches.append(branch)
+        selectedBranchID = branch.id
+    }
+
+    private func addNodeFromToolbar() {
+        guard let branchID = selectedBranchID else { return }
+        addNode(to: branchID)
     }
 
     /// Calculates completion progress for a ring based on nodes finished.
