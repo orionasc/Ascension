@@ -1,473 +1,189 @@
 import SwiftUI
 
+/// Main view presenting the Arkheion map. This rewrite focuses on the base
+/// space layer while keeping compatibility with existing data models. Future
+/// versions will layer rings, branches and nodes on top of this canvas.
 struct ArkheionMapView: View {
     @EnvironmentObject private var progressModel: ArkheionProgressModel
-    @Environment(\.dismiss) private var dismiss
-    // Explicitly type the `safeAreaInsets` environment value to avoid generic
-    // inference issues when compiling on older SDKs.
-    @State private var editNode: ArkheionNode?
-    @State private var createNodeArchetype: String?
-    @State private var selectedArchetype: String = "Scholar"
-    @State private var selectedNodeID: UUID?
-    @State private var moveMode = false
-    @State private var dragOffsets: [UUID: CGSize] = [:]
-    @State private var showDeleteConfirm = false
 
-    // Track node positions for connectors
-    @State private var nodePositions: [UUID: CGPoint] = [:]
-
-    // Connection drawing state
-    @State private var drawingConnection = false
-    @State private var connectionStart: (node: UUID, anchor: Int, point: CGPoint)?
-    @State private var currentPoint: CGPoint = .zero
-
-    private let archetypes = ["Scholar", "Sage", "Sovereign"]
-    @State private var expanded: [String: Bool] = ["Scholar": false, "Sage": false, "Sovereign": false]
-    @State private var knownNodeIDs: Set<UUID> = []
-    @State private var newlyAddedIDs: Set<UUID> = []
-
-    // Map navigation state
-    @State private var canvasOffset: CGSize = .zero
-    @GestureState private var dragTranslation: CGSize = .zero
+    // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
-    
-    private var topInset: CGFloat {
-       #if os(iOS)
-           return 44
-       #else
-           return 20
-       #endif
-       }
+    @State private var offset: CGSize = .zero
+    @GestureState private var gestureZoom: CGFloat = 1.0
+    @GestureState private var dragTranslation: CGSize = .zero
+
+    // Grid overlay toggle
+    @State private var showGrid = true
 
     var body: some View {
         GeometryReader { geo in
-            let radius = min(geo.size.width, geo.size.height) * 0.35
-            let subRadius = radius * 0.6
+            ZStack {
+                BackgroundLayer()
 
-            let drag = DragGesture(minimumDistance: 0)
-                .updating($dragTranslation) { value, state, _ in
-                    state = value.translation
-                }
-                .onEnded { value in
-                    canvasOffset.width += value.translation.width
-                    canvasOffset.height += value.translation.height
+                if showGrid {
+                    GridOverlayView()
+                        .blendMode(.overlay)
                 }
 
+                CoreGlowView()
+                    .frame(width: 140, height: 140)
+                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
+
+                // Placeholder: future ring layers will be inserted here
+                // Placeholder: branches and node layers will follow
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .scaleEffect(zoom * gestureZoom)
+            .offset(x: offset.width + dragTranslation.width,
+                    y: offset.height + dragTranslation.height)
+            .gesture(dragGesture.simultaneously(with: zoomGesture))
+            .ignoresSafeArea()
+            .overlay(gridToggleButton, alignment: .topTrailing)
+        }
+    }
+
+    // MARK: - Gestures
+
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .updating($dragTranslation) { value, state, _ in
+                state = value.translation
+            }
+            .onEnded { value in
+                offset.width += value.translation.width
+                offset.height += value.translation.height
+            }
+    }
+
+    private var zoomGesture: some Gesture {
+        MagnificationGesture()
+            .updating($gestureZoom) { value, state, _ in
+                state = value
+            }
+            .onEnded { value in
+                zoom *= value
+            }
+    }
+
+    // MARK: - Controls
+
+    private var gridToggleButton: some View {
+        Button(action: { showGrid.toggle() }) {
+            Image(systemName: showGrid ? "xmark.circle" : "circle.grid.2x2")
+                .font(.title2)
+                .padding(8)
+                .background(Color.black.opacity(0.4))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .padding()
+    }
+}
+
+// MARK: - Background Layer
+
+/// Provides the multi-gradient backdrop with a subtle shimmer.
+struct BackgroundLayer: View {
+    var body: some View {
+        GeometryReader { geo in
             let gradient = LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.32, green: 0.18, blue: 0.10),
-                    Color(red: 0.26, green: 0.26, blue: 0.28)
-                ]),
+                colors: [
+                    Color(red: 0.0, green: 0.0, blue: 0.0),
+                    Color(red: 11/255, green: 15/255, blue: 12/255)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            ZStack(alignment: .top) {
-                ZStack {
-                    connectionLines
-                    rootNodes(radius: radius, subRadius: subRadius)
-                    if drawingConnection, let start = connectionStart {
-                        NodeConnector(start: start.point, end: currentPoint)
-                            .stroke(Color.white, lineWidth: 2)
-                    }
-                    HeartSun()
-                }
-                .frame(width: geo.size.width, height: geo.size.height)
-                .contentShape(Rectangle())
-                .scaleEffect(zoom)
-                .offset(
-                    x: canvasOffset.width + dragTranslation.width,
-                    y: canvasOffset.height + dragTranslation.height
+            ZStack {
+                gradient
+
+                // Glossy shimmer overlay
+                RadialGradient(
+                    gradient: Gradient(colors: [Color.white.opacity(0.15), .clear]),
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: min(geo.size.width, geo.size.height)
                 )
-                .gesture(drag)
-
-                controlPanel
-
-                VStack {
-                    RadialNavMenuView(items: [
-                        RadialNavMenuItem(icon: "arrowshape.turn.up.left") {
-                            dismiss()
-                        },
-                        RadialNavMenuItem(icon: "sun.max") {},
-                        RadialNavMenuItem(icon: "shield") {}
-                    ])
-                }
-                .frame(maxWidth: .infinity, alignment: .top)
-                .padding(.top, 20)
-
-                SidebarControls(
-                    zoomIn: { zoom = min(zoom + 0.2, 2.5) },
-                    zoomOut: { zoom = max(zoom - 0.2, 0.6) }
-                )
+                .blendMode(.screen)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(gradient)
             .ignoresSafeArea()
         }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button(action: dismiss.callAsFunction) {
-                    Label("Back", systemImage: "chevron.left")
-                }
-            }
-        }
-        .sheet(item: $createNodeArchetype) { archetype in
-            NodeCreationView(archetype: archetype)
-        }
-        .sheet(item: $editNode) { node in
-            NodeEditView(node: node)
-        }
-        .alert("Delete this node?", isPresented: $showDeleteConfirm) {
-            Button("Delete", role: .destructive) {
-                if let id = selectedNodeID {
-                    progressModel.deleteNode(with: id)
-                    selectedNodeID = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        }
-        .onChange(of: progressModel.nodes) { oldNodes, newNodes in
-            let ids = Set(newNodes.map(\.id))
-            let added = ids.subtracting(Set(oldNodes.map(\.id)))
-            newlyAddedIDs.formUnion(added)
-            knownNodeIDs = ids
-        }
-    
-
-    }
-
-    @ViewBuilder
-    private var connectionLines: some View {
-        ForEach(progressModel.connections, id: \.id) { connection in
-            if let from = nodePositions[connection.from],
-               let to = nodePositions[connection.to] {
-                NodeConnector(start: from, end: to)
-                    .stroke(Color.white.opacity(0.6), lineWidth: 2)
-            }
-        }
-    }
-
-    // MARK: - View Builders
-
-    @ViewBuilder
-    private func rootNodes(radius: CGFloat, subRadius: CGFloat) -> some View {
-        ForEach(Array(archetypes.enumerated()), id: \.element) { index, archetype in
-            rootNodeContent(index: index,
-                            archetype: archetype,
-                            radius: radius,
-                            subRadius: subRadius)
-        }
-    }
-
-    @ViewBuilder
-    private func rootNodeContent(index: Int,
-                                 archetype: String,
-                                 radius: CGFloat,
-                                 subRadius: CGFloat) -> some View {
-        let rootAngle = Double(index) / Double(archetypes.count) * 2 * .pi
-        let rootPos = CGPoint(x: radius * cos(rootAngle), y: radius * sin(rootAngle))
-
-        RootNodeView(
-            archetype: archetype,
-            isExpanded: expanded[archetype] ?? false
-        ) {
-            withAnimation(.spring()) {
-                expanded[archetype]?.toggle()
-            }
-            selectedArchetype = archetype
-        }
-        .offset(x: rootPos.x, y: rootPos.y)
-
-        if expanded[archetype] ?? false {
-            subNodes(for: archetype,
-                     rootAngle: rootAngle,
-                     rootPos: rootPos,
-                     subRadius: subRadius)
-        }
-    }
-
-    @ViewBuilder
-    private func subNodes(for archetype: String,
-                          rootAngle: Double,
-                          rootPos: CGPoint,
-                          subRadius: CGFloat) -> some View {
-        let nodes = progressModel.nodes.filter { $0.archetype == archetype }
-        ForEach(Array(nodes.enumerated()), id: \.element.id) { subIndex, node in
-            let arcRange = Double.pi / 2
-            let startAngle = rootAngle - arcRange / 2
-            let angle = startAngle + arcRange * Double(subIndex) / Double(max(nodes.count - 1, 1))
-            let baseX = rootPos.x + subRadius * cos(angle)
-            let baseY = rootPos.y + subRadius * sin(angle)
-            let drag = dragOffsets[node.id] ?? .zero
-            let finalX = baseX + node.offset.width + drag.width
-            let finalY = baseY + node.offset.height + drag.height
-            let _ = updatePosition(for: node.id,
-                                               point: CGPoint(x: finalX, y: finalY))
-
-            NodeConnector(start: rootPos, end: CGPoint(x: finalX, y: finalY))
-                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-
-            let isNew = newlyAddedIDs.contains(node.id)
-            let isSelected = selectedNodeID == node.id
-            let delay = Double(subIndex) * 0.05
-
-            NodeView(
-                node: node,
-                isNew: isNew,
-                isSelected: isSelected,
-                isMovable: moveMode,
-                appearDelay: delay,
-                onTap: { selectedNodeID = node.id },
-                onEdit: { editNode = node },
-                onDelete: { progressModel.deleteNode(with: node.id) },
-                onDrag: { dragOffsets[node.id] = $0 },
-                onDragEnd: { translation in
-                    let newOffset = CGSize(
-                        width: node.offset.width + translation.width,
-                        height: node.offset.height + translation.height
-                    )
-                    progressModel.updateNodeOffset(id: node.id, offset: newOffset)
-                    dragOffsets[node.id] = .zero
-                },
-                onAppearDone: { newlyAddedIDs.remove(node.id) }
-            )
-            .offset(x: finalX, y: finalY)
-            .overlay(
-                NodeConnectorView(
-                    nodeID: node.id,
-                    center: CGPoint(x: finalX, y: finalY),
-                    editMode: moveMode,
-                    onStart: startConnection,
-                    onDrag: updateConnection,
-                    onEnd: endConnection
-                )
-                .frame(width: 70, height: 70)
-                .offset(x: finalX, y: finalY)
-            )
-        }
-    }
-
-    private var controlPanel: some View {
-        VStack(spacing: 12) {
-            Button(action: { createNodeArchetype = selectedArchetype }) {
-                Image(systemName: "plus")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-
-            if let _ = selectedNodeID {
-                Button(action: { showDeleteConfirm = true }) {
-                    Image(systemName: "trash")
-                        .font(.title2)
-                }
-            }
-
-            Button(action: { moveMode.toggle() }) {
-                Image(systemName: "pencil")
-                    .font(.title2)
-                    .foregroundColor(moveMode ? .yellow : .primary)
-                    .shadow(color: moveMode ? .yellow.opacity(0.7) : .clear,
-                            radius: moveMode ? 5 : 0)
-            }
-        }
-        .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-        .padding()
-        .transition(.opacity)
-    }
-    private func updatePosition(for id: UUID, point: CGPoint) {
-        DispatchQueue.main.async {
-            nodePositions[id] = point
-        }
-    }
-    // MARK: - Connection Handling
-
-    private func startConnection(id: UUID, anchor: Int, point: CGPoint) {
-        drawingConnection = true
-        connectionStart = (node: id, anchor: anchor, point: point)
-        currentPoint = point
-    }
-
-    private func updateConnection(_ point: CGPoint) {
-        currentPoint = point
-    }
-
-    private func endConnection(id: UUID, anchor: Int, _ point: CGPoint) {
-        drawingConnection = false
-        if let start = connectionStart, start.node != id {
-            progressModel.addConnection(from: start.node, to: id)
-        }
-        connectionStart = nil
     }
 }
 
-private struct NodeView: View {
-    var node: ArkheionNode
-    var isNew: Bool = false
-    var isSelected: Bool = false
-    var isMovable: Bool = false
-    var appearDelay: Double = 0
-    var onTap: () -> Void
-    var onEdit: () -> Void
-    var onDelete: () -> Void
-    var onDrag: (CGSize) -> Void = { _ in }
-    var onDragEnd: (CGSize) -> Void = { _ in }
-    var onAppearDone: () -> Void = {}
+// MARK: - Core Glow View
 
-    @State private var pressed = false
-    @State private var hovering = false
-    @State private var appeared = false
-    @State private var highlight = false
-    @State private var show = false
-    @GestureState private var drag: CGSize = .zero
+/// Renders the Ascender Core - a pulsing golden orb at the heart of the map.
+struct CoreGlowView: View {
+    @State private var pulse = false
 
     var body: some View {
-        Button(action: handleTap) {
-            VStack(spacing: 4) {
-                circle
-                Text(node.title)
-                    .font(.caption)
-                    .foregroundColor(.white)
+        Circle()
+            .fill(
+                RadialGradient(
+                    gradient: Gradient(colors: [Color.orange, Color.yellow.opacity(0.6)]),
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: 70
+                )
+            )
+            .shadow(color: Color.orange.opacity(0.8), radius: 30)
+            .scaleEffect(pulse ? 1.05 : 0.95)
+            .animation(
+                .easeInOut(duration: 2).repeatForever(autoreverses: true),
+                value: pulse
+            )
+            .onAppear { pulse = true }
+            .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Grid Overlay
+
+/// Draws faint radial and concentric grid lines used for spatial orientation.
+struct GridOverlayView: View {
+    var body: some View {
+        GeometryReader { geo in
+            Canvas { context, size in
+                let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                let maxRadius = hypot(size.width, size.height) / 2
+
+                // Concentric circles
+                let ringCount = 6
+                for i in 1...ringCount {
+                    let radius = maxRadius * CGFloat(i) / CGFloat(ringCount)
+                    var path = Path()
+                    path.addEllipse(in: CGRect(x: center.x - radius,
+                                               y: center.y - radius,
+                                               width: radius * 2,
+                                               height: radius * 2))
+                    context.stroke(path, with: .color(.white.opacity(0.1)), lineWidth: 0.5)
+                }
+
+                // Radial lines
+                let segments = 12
+                for i in 0..<segments {
+                    let angle = Double(i) / Double(segments) * 2 * .pi
+                    var path = Path()
+                    path.move(to: center)
+                    path.addLine(to: CGPoint(x: center.x + cos(angle) * maxRadius,
+                                             y: center.y + sin(angle) * maxRadius))
+                    context.stroke(path, with: .color(.white.opacity(0.1)), lineWidth: 0.5)
+                }
             }
         }
-        .buttonStyle(.plain)
-#if os(macOS)
-        .onHover { hovering = $0 }
+    }
+}
+
+// MARK: - Preview
+
+#if DEBUG
+struct ArkheionMapView_Previews: PreviewProvider {
+    static var previews: some View {
+        ArkheionMapView()
+            .environmentObject(ArkheionProgressModel())
+    }
+}
 #endif
-        .offset(drag)
-        .gesture(
-            isMovable ? DragGesture(minimumDistance: 0)
-                .updating($drag) { value, state, _ in
-                    state = value.translation
-                    onDrag(value.translation)
-                }
-                .onEnded { value in
-                    onDragEnd(value.translation)
-                }
-            : nil
-        )
-        .onAppear {
-            guard !appeared else { return }
-            appeared = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + appearDelay) {
-                withAnimation(.spring()) { show = true }
-                if isNew {
-                    highlight = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                        highlight = false
-                    }
-                }
-                onAppearDone()
-            }
-        }
-        .animation(.easeOut(duration: 0.7), value: highlight)
-        .nodeContextMenu(onEdit: onEdit, onDelete: onDelete)
-    }
 
-    private func handleTap() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
-            pressed = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            pressed = false
-        }
-        onTap()
-    }
-
-    private var circle: some View {
-        Circle()
-            .fill(nodeColor.opacity(0.8))
-            .frame(width: 70, height: 70)
-            .overlay(
-                Circle()
-                    .stroke(nodeColor, lineWidth: 4)
-                    .shadow(color: nodeColor.opacity(0.6), radius: 6)
-            )
-            .overlay(highlightCircle)
-            .overlay(selectionCircle)
-            .overlay(movableCircle)
-            .scaleEffect(show ? (pressed || hovering ? 1.1 : 1) : 0.3)
-            .opacity(show ? 1 : 0)
-    }
-
-    private var highlightCircle: some View {
-        Circle()
-            .stroke(nodeColor, lineWidth: 6)
-            .scaleEffect(highlight ? 1.4 : 1.2)
-            .opacity(highlight ? 0.8 : 0)
-    }
-
-    private var selectionCircle: some View {
-        Circle()
-            .stroke(Color.yellow, lineWidth: 4)
-            .scaleEffect(1.4)
-            .opacity(isSelected ? 1 : 0)
-            .shadow(
-                color: Color.yellow.opacity(isSelected ? 0.8 : 0),
-                radius: isSelected ? 6 : 0
-            )
-    }
-
-    private var movableCircle: some View {
-        Circle()
-            .stroke(nodeColor.opacity(isMovable ? 0.5 : 0), lineWidth: 3)
-            .blur(radius: isMovable ? 4 : 0)
-    }
-
-    private var nodeColor: Color {
-        switch node.archetype {
-        case "Scholar": return .blue
-        case "Sage": return Color(red: 0.83, green: 0.67, blue: 0.22)
-        case "Sovereign": return Color(red: 0.80, green: 0.34, blue: 0.08)
-        default: return .accentColor
-        }
-    }
-}
-
-private struct RootNodeView: View {
-    var archetype: String
-    var isExpanded: Bool
-    var action: () -> Void
-
-    private var color: Color {
-        switch archetype {
-        case "Scholar": return .blue
-        case "Sage": return Color(red: 0.83, green: 0.67, blue: 0.22)
-        case "Sovereign": return Color(red: 0.80, green: 0.34, blue: 0.08)
-        default: return .accentColor
-        }
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Circle()
-                .fill(color.opacity(0.8))
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Circle()
-                        .stroke(color, lineWidth: isExpanded ? 6 : 4)
-                        .shadow(color: color.opacity(0.6), radius: isExpanded ? 8 : 6)
-                )
-                .overlay(
-                    Text(archetype)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct HeartSun: View {
-    var body: some View {
-        GlowingSunView(animated: false)
-    }
-}
-
-#Preview {
-    ArkheionMapView()
-        .environmentObject(ArkheionProgressModel())
-}
