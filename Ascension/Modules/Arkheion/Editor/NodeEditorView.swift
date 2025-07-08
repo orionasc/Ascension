@@ -13,6 +13,15 @@ struct NodeEditorView: View {
                     TextField("Description", text: $node.description)
                 }
 
+                Section("Type") {
+                    Picker("Type", selection: $node.type) {
+                        ForEach(NodeType.allCases) { type in
+                            Text(type.rawValue.capitalized).tag(type)
+                        }
+                    }
+                    .pickerStyle(.navigationLink)
+                }
+
                 Section("Attribute") {
                     Picker("Attribute", selection: $node.attribute) {
                         ForEach(NodeAttribute.allCases) { attr in
