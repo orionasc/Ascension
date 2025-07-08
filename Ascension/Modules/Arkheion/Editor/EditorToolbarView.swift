@@ -18,6 +18,7 @@ struct EditorToolbarView: View {
     /// Callback actions provided by the host view
     var addRing: () -> Void = {}
     var unlockAllRings: () -> Void = {}
+    var deleteRing: () -> Void = {}
     var createBranch: () -> Void = {}
     var addNode: () -> Void = {}
 
@@ -68,6 +69,11 @@ struct EditorToolbarView: View {
             }
             Button(action: unlockAllRings) {
                 Label("Unlock All Rings", systemImage: "lock.open")
+            }
+            if selectedRingIndex != nil {
+                Button(role: .destructive, action: deleteRing) {
+                    Label("Delete Ring", systemImage: "trash")
+                }
             }
             if let binding = bindingForRing(selectedRingIndex) {
                 HStack {
@@ -190,6 +196,7 @@ struct EditorToolbarView: View {
         branches: .constant([]),
         selectedRingIndex: .constant(nil),
         selectedBranchID: .constant(nil),
-        selectedNodeID: .constant(nil)
+        selectedNodeID: .constant(nil),
+        deleteRing: {}
     )
 }

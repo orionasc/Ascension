@@ -15,6 +15,8 @@ struct ArkheionMapView: View {
     @State private var branches: [Branch] = []
     /// Holds the ring currently being edited.
     @State private var editingRing: RingEditTarget?
+    /// Ring briefly highlighted after a tap
+    @State private var highlightedRingIndex: Int?
 
     /// Currently selected elements for the editor toolbar
     @State private var selectedRingIndex: Int?
@@ -49,13 +51,11 @@ struct ArkheionMapView: View {
                             .frame(width: 140, height: 140)
                             .position(center)
 
-                        ForEach($rings) { $ring in
+                        ForEach(rings) { ring in
                             RingView(
                                 ring: ring,
                                 center: center,
-                                onTap: { index in onRingTapped(ringIndex: index) },
-                                onLongPress: { index in toggleLock(for: index) },
-                                onDoubleTap: { index in editingRing = RingEditTarget(ringIndex: index) }
+                                highlighted: ring.ringIndex == highlightedRingIndex
                             )
                         }
 
@@ -71,6 +71,18 @@ struct ArkheionMapView: View {
                 .scaleEffect(currentZoom)
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
+                .overlay(
+                    TapCaptureView(
+                        onTap: { location in handleTap(location, in: geo) },
+                        onDoubleTap: { location in handleDoubleTap(location, in: geo) },
+                        onLongPress: { location in
+                            if let index = nearestRingIndex(to: location, in: geo) {
+                                toggleLock(for: index)
+                                highlight(ringIndex: index)
+                            }
+                        }
+                    )
+                )
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -97,6 +109,7 @@ struct ArkheionMapView: View {
                     selectedNodeID: $selectedNodeID,
                     addRing: addRing,
                     unlockAllRings: unlockAllRings,
+                    deleteRing: deleteSelectedRing,
                     createBranch: createBranch,
                     addNode: addNodeFromToolbar
                 )
@@ -184,6 +197,17 @@ struct ArkheionMapView: View {
         rings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
     }
 
+    private func deleteSelectedRing() {
+        guard let ringIndex = selectedRingIndex else { return }
+        guard rings.count > 1 else { return }
+        rings.removeAll { $0.ringIndex == ringIndex }
+        branches.removeAll { $0.ringIndex == ringIndex }
+        if editingRing?.ringIndex == ringIndex { editingRing = nil }
+        selectedRingIndex = nil
+        selectedBranchID = nil
+        selectedNodeID = nil
+    }
+
     private func addNode(to branchID: UUID) {
         guard let index = branches.firstIndex(where: { $0.id == branchID }) else { return }
         branches[index].nodes.append(Node())
@@ -215,6 +239,43 @@ struct ArkheionMapView: View {
         guard !nodes.isEmpty else { return 0 }
         let completed = nodes.filter { $0.completed }.count
         return Double(completed) / Double(nodes.count)
+    }
+
+    // MARK: - Tap Handling
+    private func handleTap(_ location: CGPoint, in geo: GeometryProxy) {
+        guard let ringIndex = nearestRingIndex(to: location, in: geo) else { return }
+        highlight(ringIndex: ringIndex)
+        onRingTapped(ringIndex: ringIndex)
+    }
+
+    private func handleDoubleTap(_ location: CGPoint, in geo: GeometryProxy) {
+        guard let ringIndex = nearestRingIndex(to: location, in: geo) else { return }
+        highlight(ringIndex: ringIndex)
+        editingRing = RingEditTarget(ringIndex: ringIndex)
+    }
+
+    private func nearestRingIndex(to location: CGPoint, in geo: GeometryProxy) -> Int? {
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let currentZoom = zoom * gestureZoom
+        var point = location
+        point.x -= offset.width + dragTranslation.width
+        point.y -= offset.height + dragTranslation.height
+        point.x = center.x + (point.x - center.x) / currentZoom
+        point.y = center.y + (point.y - center.y) / currentZoom
+        let distance = hypot(point.x - center.x, point.y - center.y)
+        return rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) })?.ringIndex
+    }
+
+    private func highlight(ringIndex: Int) {
+#if os(iOS)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+#endif
+        highlightedRingIndex = ringIndex
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            if highlightedRingIndex == ringIndex {
+                highlightedRingIndex = nil
+            }
+        }
     }
 }
 
