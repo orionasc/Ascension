@@ -27,31 +27,33 @@ struct ArkheionMapView: View {
             let currentZoom = zoom * gestureZoom
 
             ZStack {
-                BackgroundLayer(zoom: currentZoom)
-
-                if showGrid {
-                    GridOverlayView(zoom: currentZoom)
-                        .blendMode(.overlay)
-                }
+                BackgroundLayer()
 
                 ZStack {
-                    CoreGlowView()
-                        .frame(width: 140, height: 140)
-                        .position(center)
-
-                    ForEach(rings) { ring in
-                        RingView(ring: ring, center: center) { index in
-                            onRingTapped(ringIndex: index)
-                        }
+                    if showGrid {
+                        GridOverlayView()
+                            .blendMode(.overlay)
                     }
 
-                    // Placeholder: branches and node layers will follow
+                    ZStack {
+                        CoreGlowView()
+                            .frame(width: 140, height: 140)
+                            .position(center)
+
+                        ForEach(rings) { ring in
+                            RingView(ring: ring, center: center) { index in
+                                onRingTapped(ringIndex: index)
+                            }
+                        }
+
+                        // Placeholder: branches and node layers will follow
+                    }
                 }
                 .scaleEffect(currentZoom)
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
-                .gesture(dragGesture.simultaneously(with: zoomGesture))
             }
+            .gesture(dragGesture.simultaneously(with: zoomGesture))
             .frame(width: geo.size.width, height: geo.size.height)
             .ignoresSafeArea()
             .overlay(gridToggleButton, alignment: .topTrailing)
@@ -107,8 +109,6 @@ struct ArkheionMapView: View {
 
 /// Provides the multi-gradient backdrop with a subtle shimmer.
 struct BackgroundLayer: View {
-    /// Zoom factor determines how spread out the shimmer effect appears.
-    var zoom: CGFloat
 
     var body: some View {
         GeometryReader { geo in
@@ -129,7 +129,7 @@ struct BackgroundLayer: View {
                     gradient: Gradient(colors: [Color.white.opacity(0.15), .clear]),
                     center: .center,
                     startRadius: 0,
-                    endRadius: max(geo.size.width, geo.size.height) * zoom
+                    endRadius: max(geo.size.width, geo.size.height)
                 )
                 .blendMode(.screen)
             }

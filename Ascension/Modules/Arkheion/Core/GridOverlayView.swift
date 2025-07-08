@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// Draws radial and concentric grid lines that adjust spacing based on zoom.
+/// Draws radial and concentric grid lines that move with the map content.
 struct GridOverlayView: View {
-    /// Current zoom factor of the map.
-    var zoom: CGFloat
 
     private let baseSpacing: CGFloat = 80
     private let segmentCount = 12
@@ -12,10 +10,10 @@ struct GridOverlayView: View {
         GeometryReader { _ in
             Canvas { context, size in
                 let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                let maxRadius = hypot(size.width, size.height) / 2
+                let maxRadius = hypot(size.width, size.height) * 2
 
                 // Determine spacing between rings so it appears constant
-                var radius: CGFloat = baseSpacing * zoom
+                var radius: CGFloat = baseSpacing
                 while radius <= maxRadius {
                     var path = Path()
                     path.addEllipse(in: CGRect(x: center.x - radius,
@@ -24,7 +22,7 @@ struct GridOverlayView: View {
                                                height: radius * 2))
                     let alpha = 0.2 * (1.0 - (radius / maxRadius))
                     context.stroke(path, with: .color(Color.white.opacity(alpha)), lineWidth: 0.5)
-                    radius += baseSpacing * zoom
+                    radius += baseSpacing
                 }
 
                 // Radial segments
@@ -44,7 +42,7 @@ struct GridOverlayView: View {
 
 #if DEBUG
 #Preview {
-    GridOverlayView(zoom: 1)
+    GridOverlayView()
         .frame(width: 300, height: 300)
 }
 #endif
