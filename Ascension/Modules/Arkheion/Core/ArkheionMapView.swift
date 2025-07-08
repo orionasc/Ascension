@@ -24,32 +24,35 @@ struct ArkheionMapView: View {
     var body: some View {
         GeometryReader { geo in
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+            let currentZoom = zoom * gestureZoom
 
             ZStack {
-                BackgroundLayer()
+                BackgroundLayer(zoom: currentZoom)
 
                 if showGrid {
-                    GridOverlayView()
+                    GridOverlayView(zoom: currentZoom)
                         .blendMode(.overlay)
                 }
 
-                CoreGlowView()
-                    .frame(width: 140, height: 140)
-                    .position(center)
+                ZStack {
+                    CoreGlowView()
+                        .frame(width: 140, height: 140)
+                        .position(center)
 
-                ForEach(rings) { ring in
-                    RingView(ring: ring, center: center) { index in
-                        onRingTapped(ringIndex: index)
+                    ForEach(rings) { ring in
+                        RingView(ring: ring, center: center) { index in
+                            onRingTapped(ringIndex: index)
+                        }
                     }
-                }
 
-                // Placeholder: branches and node layers will follow
+                    // Placeholder: branches and node layers will follow
+                }
+                .scaleEffect(currentZoom)
+                .offset(x: offset.width + dragTranslation.width,
+                        y: offset.height + dragTranslation.height)
+                .gesture(dragGesture.simultaneously(with: zoomGesture))
             }
             .frame(width: geo.size.width, height: geo.size.height)
-            .scaleEffect(zoom * gestureZoom)
-            .offset(x: offset.width + dragTranslation.width,
-                    y: offset.height + dragTranslation.height)
-            .gesture(dragGesture.simultaneously(with: zoomGesture))
             .ignoresSafeArea()
             .overlay(gridToggleButton, alignment: .topTrailing)
         }
@@ -104,6 +107,9 @@ struct ArkheionMapView: View {
 
 /// Provides the multi-gradient backdrop with a subtle shimmer.
 struct BackgroundLayer: View {
+    /// Zoom factor determines how spread out the shimmer effect appears.
+    var zoom: CGFloat
+
     var body: some View {
         GeometryReader { geo in
             let gradient = LinearGradient(
@@ -123,7 +129,7 @@ struct BackgroundLayer: View {
                     gradient: Gradient(colors: [Color.white.opacity(0.15), .clear]),
                     center: .center,
                     startRadius: 0,
-                    endRadius: min(geo.size.width, geo.size.height)
+                    endRadius: max(geo.size.width, geo.size.height) * zoom
                 )
                 .blendMode(.screen)
             }
@@ -156,43 +162,6 @@ struct CoreGlowView: View {
             )
             .onAppear { pulse = true }
             .allowsHitTesting(false)
-    }
-}
-
-// MARK: - Grid Overlay
-
-/// Draws faint radial and concentric grid lines used for spatial orientation.
-struct GridOverlayView: View {
-    var body: some View {
-        GeometryReader { geo in
-            Canvas { context, size in
-                let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                let maxRadius = hypot(size.width, size.height) / 2
-
-                // Concentric circles
-                let ringCount = 6
-                for i in 1...ringCount {
-                    let radius = maxRadius * CGFloat(i) / CGFloat(ringCount)
-                    var path = Path()
-                    path.addEllipse(in: CGRect(x: center.x - radius,
-                                               y: center.y - radius,
-                                               width: radius * 2,
-                                               height: radius * 2))
-                    context.stroke(path, with: .color(.white.opacity(0.1)), lineWidth: 0.5)
-                }
-
-                // Radial lines
-                let segments = 12
-                for i in 0..<segments {
-                    let angle = Double(i) / Double(segments) * 2 * .pi
-                    var path = Path()
-                    path.move(to: center)
-                    path.addLine(to: CGPoint(x: center.x + cos(angle) * maxRadius,
-                                             y: center.y + sin(angle) * maxRadius))
-                    context.stroke(path, with: .color(.white.opacity(0.1)), lineWidth: 0.5)
-                }
-            }
-        }
     }
 }
 
