@@ -19,7 +19,7 @@ struct NodeEditorView: View {
                             Text(type.rawValue.capitalized).tag(type)
                         }
                     }
-                    .pickerStyle(.navigationLink)
+                    .pickerStyle(.segmented)
                 }
 
                 Section("Attribute") {
@@ -28,7 +28,7 @@ struct NodeEditorView: View {
                             Text(attr.rawValue.capitalized).tag(attr)
                         }
                     }
-                    .pickerStyle(.navigationLink)
+                    .pickerStyle(.segmented)
                 }
 
                 Section("Size") {
