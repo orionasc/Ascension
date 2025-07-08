@@ -5,6 +5,13 @@ import SwiftUI
 /// versions will layer rings, branches and nodes on top of this canvas.
 struct ArkheionMapView: View {
 
+    /// Sample ring data. Later this will be loaded from persistent storage.
+    private let rings: [Ring] = [
+        Ring(ringIndex: 0, radius: 180, locked: false),
+        Ring(ringIndex: 1, radius: 260, locked: true),
+        Ring(ringIndex: 2, radius: 340, locked: true)
+    ]
+
     // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
     @State private var offset: CGSize = .zero
@@ -16,6 +23,8 @@ struct ArkheionMapView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+
             ZStack {
                 BackgroundLayer()
 
@@ -26,9 +35,14 @@ struct ArkheionMapView: View {
 
                 CoreGlowView()
                     .frame(width: 140, height: 140)
-                    .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                    .position(center)
 
-                // Placeholder: future ring layers will be inserted here
+                ForEach(rings) { ring in
+                    RingView(ring: ring, center: center) { index in
+                        onRingTapped(ringIndex: index)
+                    }
+                }
+
                 // Placeholder: branches and node layers will follow
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -76,6 +90,13 @@ struct ArkheionMapView: View {
         }
         .buttonStyle(.plain)
         .padding()
+    }
+
+    // MARK: - Interaction
+
+    private func onRingTapped(ringIndex: Int) {
+        // Placeholder for branch anchor creation
+        print("Ring \(ringIndex) tapped")
     }
 }
 
