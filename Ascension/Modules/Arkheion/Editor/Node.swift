@@ -1,6 +1,13 @@
 import Foundation
 import SwiftUI
 
+/// Classification for different kinds of nodes that can appear on a branch.
+enum NodeType: String, CaseIterable, Identifiable {
+    case milestone, seal, rite, unknown
+
+    var id: String { rawValue }
+}
+
 /// Governing attributes for nodes and journeys.
 enum NodeAttribute: String, CaseIterable, Identifiable {
     case scholar, sage, sovereign, luma, praos, astra, clarity, presence, will, unknown
@@ -41,6 +48,7 @@ enum NodeSize: String, CaseIterable, Identifiable {
 /// Data model for a single node on a branch
 struct Node: Identifiable {
     let id = UUID()
+    var type: NodeType = .milestone
     var title: String = ""
     var description: String = ""
     var attribute: NodeAttribute = .unknown
