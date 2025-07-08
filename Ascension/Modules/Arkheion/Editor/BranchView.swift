@@ -5,8 +5,9 @@ struct BranchView: View {
     @Binding var branch: Branch
     var center: CGPoint
     var ringRadius: CGFloat
+    @Binding var selectedBranchID: UUID?
+    @Binding var selectedNodeID: UUID?
     var onAddNode: () -> Void = {}
-    @State private var selectedNode: Node?
 
     var body: some View {
         // Distance for the branch line extending past the ring
@@ -18,16 +19,26 @@ struct BranchView: View {
             y: center.y + sin(branch.angle) * ringRadius
         )
 
+        let branchPath = Path { path in
+            path.move(to: origin)
+            let end = CGPoint(
+                x: origin.x + cos(branch.angle) * pathLength,
+                y: origin.y + sin(branch.angle) * pathLength
+            )
+            path.addLine(to: end)
+        }
+
         ZStack {
-            Path { path in
-                path.move(to: origin)
-                let end = CGPoint(
-                    x: origin.x + cos(branch.angle) * pathLength,
-                    y: origin.y + sin(branch.angle) * pathLength
+            branchPath
+                .stroke(selectedBranchID == branch.id ? Color.white : Color.white.opacity(0.5), lineWidth: selectedBranchID == branch.id ? 4 : 2)
+                .contentShape(branchPath)
+                .onTapGesture {
+                    selectedBranchID = branch.id
+                    selectedNodeID = nil
+                }
+                .overlay(
+                    branchPath.stroke(Color.clear, lineWidth: 20)
                 )
-                path.addLine(to: end)
-            }
-            .stroke(Color.white.opacity(0.5), lineWidth: 2)
 
             ForEach(Array(branch.nodes.enumerated()), id: \.1.id) { index, node in
                 let distance = ringRadius + CGFloat(index + 1) * 60
@@ -41,11 +52,18 @@ struct BranchView: View {
                     .frame(width: node.size.radius * 2, height: node.size.radius * 2)
                     .padding(12)
                     .contentShape(Circle().inset(by: -12))
-                    .scaleEffect(selectedNode?.id == node.id ? 1.2 : 1.0)
-                    .animation(.easeInOut(duration: 0.2), value: selectedNode?.id == node.id)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white, lineWidth: selectedNodeID == node.id ? 3 : 0)
+                    )
+                    .scaleEffect(selectedNodeID == node.id ? 1.2 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: selectedNodeID == node.id)
                     .position(position)
                     .shadow(color: node.completed ? .clear : node.attribute.color, radius: node.completed ? 0 : 6)
-                    .onTapGesture { selectedNode = branch.nodes[index] }
+                    .onTapGesture {
+                        selectedBranchID = branch.id
+                        selectedNodeID = node.id
+                    }
             }
 
             Circle()
@@ -57,14 +75,15 @@ struct BranchView: View {
                           y: center.y + sin(branch.angle) * ringRadius)
                 .onTapGesture { onAddNode() }
         }
-        .sheet(item: $selectedNode) { idx in
-            if let index = branch.nodes.firstIndex(where: { $0.id == idx.id }) {
-                NodeEditorView(node: $branch.nodes[index])
-            }
-        }
     }
 }
 
 #Preview {
-    BranchView(branch: .constant(Branch(ringIndex: 0, angle: 0, nodes: [Node()])), center: CGPoint(x: 150, y: 150), ringRadius: 100)
+    BranchView(
+        branch: .constant(Branch(ringIndex: 0, angle: 0, nodes: [Node()])),
+        center: CGPoint(x: 150, y: 150),
+        ringRadius: 100,
+        selectedBranchID: .constant(nil),
+        selectedNodeID: .constant(nil)
+    )
 }

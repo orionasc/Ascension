@@ -61,7 +61,13 @@ struct ArkheionMapView: View {
 
                         ForEach($branches) { $branch in
                             if let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) {
-                                BranchView(branch: $branch, center: center, ringRadius: ring.radius) {
+                                BranchView(
+                                    branch: $branch,
+                                    center: center,
+                                    ringRadius: ring.radius,
+                                    selectedBranchID: $selectedBranchID,
+                                    selectedNodeID: $selectedNodeID
+                                ) {
                                     addNode(to: branch.id)
                                 }
                             }
