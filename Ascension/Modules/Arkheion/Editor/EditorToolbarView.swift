@@ -117,6 +117,7 @@ struct EditorToolbarView: View {
             Button(action: addNode) {
                 Label("Add Node", systemImage: "plus")
             }
+            .disabled(selectedBranchID == nil)
             if let nodeBinding = bindingForNode(selectedNodeID, branchID: selectedBranchID) {
                 Picker("Type", selection: nodeBinding.type) {
                     ForEach(NodeType.allCases) { type in
