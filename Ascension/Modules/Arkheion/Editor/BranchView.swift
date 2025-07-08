@@ -32,6 +32,10 @@ struct BranchView: View {
                 Circle()
                     .fill(node.attribute.color)
                     .frame(width: node.size.radius * 2, height: node.size.radius * 2)
+                    .padding(12)
+                    .contentShape(Circle().inset(by: -12))
+                    .scaleEffect(selectedNode?.id == node.id ? 1.2 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: selectedNode?.id == node.id)
                     .position(position)
                     .shadow(color: node.completed ? .clear : node.attribute.color, radius: node.completed ? 0 : 6)
                     .onTapGesture { selectedNode = branch.nodes[index] }
@@ -40,6 +44,8 @@ struct BranchView: View {
             Circle()
                 .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [4]))
                 .frame(width: 24, height: 24)
+                .padding(10)
+                .contentShape(Circle().inset(by: -10))
                 .position(x: center.x + cos(branch.angle) * ringRadius,
                           y: center.y + sin(branch.angle) * ringRadius)
                 .onTapGesture { onAddNode() }
