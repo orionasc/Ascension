@@ -17,7 +17,6 @@ struct AscensionHomeView: View {
 
     @State private var showQuote = false
     @State private var showArkheionMap = false
-    @EnvironmentObject private var progressModel: ArkheionProgressModel
 
     var body: some View {
         GeometryReader { geo in
@@ -97,7 +96,6 @@ struct AscensionHomeView: View {
             NavigationStack {
                 ArkheionMapView()
             }
-            .environmentObject(progressModel)
         }
     }
 
@@ -112,7 +110,6 @@ struct AscensionHomeView: View {
 
 #Preview {
     AscensionHomeView()
-        .environmentObject(ArkheionProgressModel())
 }
 
 #if os(macOS)
