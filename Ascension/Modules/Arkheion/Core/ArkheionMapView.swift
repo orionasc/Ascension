@@ -369,7 +369,10 @@ struct ArkheionMapView: View {
         let distance = hypot(point.x - center.x, point.y - center.y)
         let angle = atan2(point.y - center.y, point.x - center.x)
         guard let ring = rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
-        if abs(distance - ring.radius) <= 20 { return (ring.ringIndex, angle) }
+        if abs(distance - ring.radius) <= 20 {
+            return (ring.ringIndex, Double(angle))
+        }
+
         return nil
     }
 
