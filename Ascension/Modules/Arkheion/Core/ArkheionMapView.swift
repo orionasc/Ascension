@@ -24,6 +24,7 @@ struct ArkheionMapView: View {
     @State private var selectedNodeID: UUID?
 
     // MARK: - Gestures
+    @State private var lastDragLocation: CGPoint? = nil
     @State private var zoom: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @GestureState private var gestureZoom: CGFloat = 1.0
@@ -78,23 +79,25 @@ struct ArkheionMapView: View {
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
                 .gesture(
-                    TapGesture()
+                    DragGesture(minimumDistance: 0)
                         .onEnded { value in
                             handleTap(at: value.location, in: geo)
                         }
                 )
                 .simultaneousGesture(
                     TapGesture(count: 2)
-                        .onEnded { value in
-                            handleDoubleTap(at: value.location, in: geo)
+                        .onEnded {
+                            let location = lastDragLocation ?? .zero
+                            handleDoubleTap(at: location, in: geo)
                         }
                 )
                 .simultaneousGesture(
-                    LongPressGesture()
-                        .onEnded { value in
-                            handleLongPress(at: value.location, in: geo)
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            lastDragLocation = value.location
                         }
                 )
+                
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
