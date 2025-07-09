@@ -77,7 +77,7 @@ struct ArkheionMapView: View {
                 .scaleEffect(currentZoom)
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
-                .overlay(
+                .background(
                     TapCaptureView(
                         onTap: { location in handleTap(location, in: geo) },
                         onDoubleTap: { location in handleDoubleTap(location, in: geo) },
@@ -249,7 +249,7 @@ struct ArkheionMapView: View {
 
     // MARK: - Tap Handling
     private func handleTap(_ location: CGPoint, in geo: GeometryProxy) {
-        if let branchID = hitBranch(at: location, in: geo) {
+        if selectedBranchID == nil, let branchID = hitBranch(at: location, in: geo) {
             selectedBranchID = branchID
             selectedNodeID = nil
             return
