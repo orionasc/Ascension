@@ -32,6 +32,9 @@ struct ArkheionMapView: View {
 
     // Grid overlay toggle
     @State private var showGrid = true
+    // Hover indicator
+    @State private var hoverRingIndex: Int? = nil
+    @State private var hoverAngle: Double = 0.0
 
     var body: some View {
         GeometryReader { geo in
@@ -73,6 +76,20 @@ struct ArkheionMapView: View {
                                 }
                             }
                         }
+
+                        if let index = hoverRingIndex,
+                           let ring = rings.first(where: { $0.ringIndex == index }) {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 14, height: 14)
+                                .position(
+                                    x: center.x + cos(hoverAngle) * ring.radius,
+                                    y: center.y + sin(hoverAngle) * ring.radius
+                                )
+                                .opacity(0.9)
+                                .animation(.easeInOut(duration: 0.2), value: hoverRingIndex)
+                                .allowsHitTesting(false)
+                        }
                     }
                 }
                 .scaleEffect(currentZoom)
@@ -80,8 +97,13 @@ struct ArkheionMapView: View {
                         y: offset.height + dragTranslation.height)
                 .gesture(
                     DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            lastDragLocation = value.location
+                            updateHover(at: value.location, in: geo)
+                        }
                         .onEnded { value in
                             handleTap(at: value.location, in: geo)
+                            updateHover(at: value.location, in: geo)
                         }
                 )
                 .simultaneousGesture(
@@ -91,17 +113,14 @@ struct ArkheionMapView: View {
                             handleDoubleTap(at: location, in: geo)
                         }
                 )
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            lastDragLocation = value.location
-                        }
-                )
                 
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
+            .onHover { hovering in
+                if !hovering { hoverRingIndex = nil }
+            }
             .overlay(gridToggleButton, alignment: .topTrailing)
             .overlay(addRingButton, alignment: .bottomTrailing)
             .overlay(alignment: .top) {
@@ -188,12 +207,11 @@ struct ArkheionMapView: View {
 
     // MARK: - Interaction
 
-    private func onRingTapped(ringIndex: Int) {
+    private func onRingTapped(ringIndex: Int, angle: Double) {
         selectedRingIndex = ringIndex
         selectedBranchID = nil
         selectedNodeID = nil
         guard let ring = rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
-        let angle = Double.random(in: 0..<(2 * .pi))
         let branch = Branch(ringIndex: ringIndex, angle: angle)
         branches.append(branch)
         selectedBranchID = branch.id
@@ -242,8 +260,7 @@ struct ArkheionMapView: View {
 
     private func createBranch() {
         guard let ringIndex = selectedRingIndex else { return }
-        let angle = Double.random(in: 0..<(2 * .pi))
-        let branch = Branch(ringIndex: ringIndex, angle: angle)
+        let branch = Branch(ringIndex: ringIndex, angle: 0)
         branches.append(branch)
         selectedBranchID = branch.id
     }
@@ -306,9 +323,9 @@ struct ArkheionMapView: View {
             return
         }
 
-        if let ringIndex = nearestRing(at: location, in: geo) {
+        if let (ringIndex, angle) = ringHit(at: location, in: geo) {
             highlight(ringIndex: ringIndex)
-            onRingTapped(ringIndex: ringIndex)
+            onRingTapped(ringIndex: ringIndex, angle: angle)
         } else {
             selectedRingIndex = nil
             selectedBranchID = nil
@@ -338,6 +355,31 @@ struct ArkheionMapView: View {
         point.y = center.y + (point.y - center.y) / currentZoom
         let distance = hypot(point.x - center.x, point.y - center.y)
         return rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) })?.ringIndex
+    }
+
+    /// Returns the ring index and angle if the location hovers a ring edge
+    private func ringHit(at location: CGPoint, in geo: GeometryProxy) -> (Int, Double)? {
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let currentZoom = zoom * gestureZoom
+        var point = location
+        point.x -= offset.width + dragTranslation.width
+        point.y -= offset.height + dragTranslation.height
+        point.x = center.x + (point.x - center.x) / currentZoom
+        point.y = center.y + (point.y - center.y) / currentZoom
+        let distance = hypot(point.x - center.x, point.y - center.y)
+        let angle = atan2(point.y - center.y, point.x - center.x)
+        guard let ring = rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
+        if abs(distance - ring.radius) <= 20 { return (ring.ringIndex, angle) }
+        return nil
+    }
+
+    private func updateHover(at location: CGPoint, in geo: GeometryProxy) {
+        if let (index, angle) = ringHit(at: location, in: geo) {
+            hoverRingIndex = index
+            hoverAngle = angle
+        } else {
+            hoverRingIndex = nil
+        }
     }
 
     private func hitNode(at location: CGPoint, in geo: GeometryProxy) -> (branchID: UUID, nodeID: UUID)? {
