@@ -21,6 +21,10 @@ struct EditorToolbarView: View {
     var deleteRing: () -> Void = {}
     var createBranch: () -> Void = {}
     var addNode: () -> Void = {}
+    var deleteBranch: () -> Void = {}
+    var deleteNode: () -> Void = {}
+    var moveNodeUp: () -> Void = {}
+    var moveNodeDown: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 0) {
@@ -92,6 +96,11 @@ struct EditorToolbarView: View {
             Button(action: createBranch) {
                 Label("Create New Branch", systemImage: "line.diagonal.arrow")
             }
+            if selectedBranchID != nil {
+                Button(role: .destructive, action: deleteBranch) {
+                    Label("Delete Branch", systemImage: "trash")
+                }
+            }
             Picker("Ring", selection: $selectedRingIndex) {
                 Text("None").tag(Int?.none)
                 ForEach(rings) { ring in
@@ -118,6 +127,19 @@ struct EditorToolbarView: View {
                 Label("Add Node", systemImage: "plus")
             }
             .disabled(selectedBranchID == nil)
+            if selectedNodeID != nil {
+                HStack {
+                    Button(action: moveNodeUp) {
+                        Image(systemName: "arrow.up")
+                    }
+                    Button(action: moveNodeDown) {
+                        Image(systemName: "arrow.down")
+                    }
+                }
+                Button(role: .destructive, action: deleteNode) {
+                    Label("Delete Node", systemImage: "trash")
+                }
+            }
             if let nodeBinding = bindingForNode(selectedNodeID, branchID: selectedBranchID) {
                 Picker("Type", selection: nodeBinding.type) {
                     ForEach(NodeType.allCases) { type in
