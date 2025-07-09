@@ -123,7 +123,11 @@ struct ArkheionMapView: View {
                     unlockAllRings: unlockAllRings,
                     deleteRing: deleteSelectedRing,
                     createBranch: createBranch,
-                    addNode: addNodeFromToolbar
+                    addNode: addNodeFromToolbar,
+                    deleteBranch: deleteSelectedBranch,
+                    deleteNode: deleteSelectedNode,
+                    moveNodeUp: moveSelectedNodeUp,
+                    moveNodeDown: moveSelectedNodeDown
                 )
                 .padding(.trailing, 8)
             }
@@ -222,7 +226,9 @@ struct ArkheionMapView: View {
 
     private func addNode(to branchID: UUID) {
         guard let index = branches.firstIndex(where: { $0.id == branchID }) else { return }
-        branches[index].nodes.append(Node())
+        let node = Node()
+        branches[index].nodes.insert(node, at: 0)
+        selectedNodeID = node.id
     }
 
     private func unlockAllRings() {
@@ -242,6 +248,34 @@ struct ArkheionMapView: View {
     private func addNodeFromToolbar() {
         guard let branchID = selectedBranchID else { return }
         addNode(to: branchID)
+    }
+
+    private func deleteSelectedBranch() {
+        guard let id = selectedBranchID else { return }
+        branches.removeAll { $0.id == id }
+        selectedBranchID = nil
+        selectedNodeID = nil
+    }
+
+    private func deleteSelectedNode() {
+        guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
+        guard let bIndex = branches.firstIndex(where: { $0.id == branchID }) else { return }
+        branches[bIndex].nodes.removeAll { $0.id == nodeID }
+        selectedNodeID = nil
+    }
+
+    private func moveSelectedNodeUp() {
+        guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
+        guard let bIndex = branches.firstIndex(where: { $0.id == branchID }) else { return }
+        guard let nIndex = branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex > 0 else { return }
+        branches[bIndex].nodes.swapAt(nIndex, nIndex - 1)
+    }
+
+    private func moveSelectedNodeDown() {
+        guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
+        guard let bIndex = branches.firstIndex(where: { $0.id == branchID }) else { return }
+        guard let nIndex = branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex < branches[bIndex].nodes.count - 1 else { return }
+        branches[bIndex].nodes.swapAt(nIndex, nIndex + 1)
     }
 
     /// Calculates completion progress for a ring based on nodes finished.
