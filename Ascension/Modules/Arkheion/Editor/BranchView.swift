@@ -31,14 +31,13 @@ struct BranchView: View {
         ZStack {
             branchPath
                 .stroke(selectedBranchID == branch.id ? Color.white : Color.white.opacity(0.5), lineWidth: selectedBranchID == branch.id ? 4 : 2)
-                .contentShape(branchPath)
+                .background(branchPath.stroke(Color.clear, lineWidth: 20))
+                .contentShape(Rectangle())
                 .onTapGesture {
                     selectedBranchID = branch.id
                     selectedNodeID = nil
                 }
-                .overlay(
-                    branchPath.stroke(Color.clear, lineWidth: 20)
-                )
+                .zIndex(10)
 
             ForEach(Array(branch.nodes.enumerated()), id: \.1.id) { index, node in
                 let distance = ringRadius + CGFloat(index + 1) * 60
