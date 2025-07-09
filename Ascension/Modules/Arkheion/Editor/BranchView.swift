@@ -32,10 +32,6 @@ struct BranchView: View {
             branchPath
                 .stroke(selectedBranchID == branch.id ? Color.white : Color.white.opacity(0.5), lineWidth: selectedBranchID == branch.id ? 4 : 2)
                 .contentShape(branchPath.strokedPath(StrokeStyle(lineWidth: 20)))
-                .onTapGesture {
-                    selectedBranchID = branch.id
-                    selectedNodeID = nil
-                }
                 .zIndex(2)
 
             ForEach(Array(branch.nodes.enumerated()), id: \.1.id) { index, node in
@@ -58,10 +54,6 @@ struct BranchView: View {
                     .animation(.easeInOut(duration: 0.2), value: selectedNodeID == node.id)
                     .position(position)
                     .shadow(color: node.completed ? .clear : node.attribute.color, radius: node.completed ? 0 : 6)
-                    .onTapGesture {
-                        selectedBranchID = branch.id
-                        selectedNodeID = node.id
-                    }
             }
 
             Circle()
@@ -71,7 +63,6 @@ struct BranchView: View {
                 .contentShape(Circle().inset(by: -10))
                 .position(x: center.x + cos(branch.angle) * ringRadius,
                           y: center.y + sin(branch.angle) * ringRadius)
-                .onTapGesture { onAddNode() }
         }
         .contentShape(branchPath)
         .zIndex(1)

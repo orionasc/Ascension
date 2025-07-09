@@ -77,17 +77,23 @@ struct ArkheionMapView: View {
                 .scaleEffect(currentZoom)
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
-                .background(
-                    TapCaptureView(
-                        onTap: { location in handleTap(location, in: geo) },
-                        onDoubleTap: { location in handleDoubleTap(location, in: geo) },
-                        onLongPress: { location in
-                            if let index = nearestRingIndex(to: location, in: geo) {
-                                toggleLock(for: index)
-                                highlight(ringIndex: index)
-                            }
+                .gesture(
+                    TapGesture()
+                        .onEnded { value in
+                            handleTap(at: value.location, in: geo)
                         }
-                    )
+                )
+                .simultaneousGesture(
+                    TapGesture(count: 2)
+                        .onEnded { value in
+                            handleDoubleTap(at: value.location, in: geo)
+                        }
+                )
+                .simultaneousGesture(
+                    LongPressGesture()
+                        .onEnded { value in
+                            handleLongPress(at: value.location, in: geo)
+                        }
                 )
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
@@ -248,24 +254,44 @@ struct ArkheionMapView: View {
     }
 
     // MARK: - Tap Handling
-    private func handleTap(_ location: CGPoint, in geo: GeometryProxy) {
-        if selectedBranchID == nil, let branchID = hitBranch(at: location, in: geo) {
-            selectedBranchID = branchID
-            selectedNodeID = nil
+    private func handleTap(at location: CGPoint, in geo: GeometryProxy) {
+        if let hit = hitNode(at: location, in: geo) {
+            selectedBranchID = hit.branchID
+            selectedNodeID = hit.nodeID
+            selectedRingIndex = nil
             return
         }
-        guard let ringIndex = nearestRingIndex(to: location, in: geo) else { return }
-        highlight(ringIndex: ringIndex)
-        onRingTapped(ringIndex: ringIndex)
+
+        if let branchID = hitBranch(at: location, in: geo) {
+            selectedBranchID = branchID
+            selectedNodeID = nil
+            selectedRingIndex = nil
+            return
+        }
+
+        if let ringIndex = nearestRing(at: location, in: geo) {
+            highlight(ringIndex: ringIndex)
+            onRingTapped(ringIndex: ringIndex)
+        } else {
+            selectedRingIndex = nil
+            selectedBranchID = nil
+            selectedNodeID = nil
+        }
     }
 
-    private func handleDoubleTap(_ location: CGPoint, in geo: GeometryProxy) {
-        guard let ringIndex = nearestRingIndex(to: location, in: geo) else { return }
+    private func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
+        guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
         editingRing = RingEditTarget(ringIndex: ringIndex)
     }
 
-    private func nearestRingIndex(to location: CGPoint, in geo: GeometryProxy) -> Int? {
+    private func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
+        guard let index = nearestRing(at: location, in: geo) else { return }
+        toggleLock(for: index)
+        highlight(ringIndex: index)
+    }
+
+    private func nearestRing(at location: CGPoint, in geo: GeometryProxy) -> Int? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let currentZoom = zoom * gestureZoom
         var point = location
@@ -275,6 +301,32 @@ struct ArkheionMapView: View {
         point.y = center.y + (point.y - center.y) / currentZoom
         let distance = hypot(point.x - center.x, point.y - center.y)
         return rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) })?.ringIndex
+    }
+
+    private func hitNode(at location: CGPoint, in geo: GeometryProxy) -> (branchID: UUID, nodeID: UUID)? {
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let currentZoom = zoom * gestureZoom
+        var point = location
+        point.x -= offset.width + dragTranslation.width
+        point.y -= offset.height + dragTranslation.height
+        point.x = center.x + (point.x - center.x) / currentZoom
+        point.y = center.y + (point.y - center.y) / currentZoom
+
+        for branch in branches {
+            guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
+            for (idx, node) in branch.nodes.enumerated() {
+                let distance = ring.radius + CGFloat(idx + 1) * 60
+                let position = CGPoint(
+                    x: center.x + cos(branch.angle) * distance,
+                    y: center.y + sin(branch.angle) * distance
+                )
+                let hitRadius = node.size.radius + 12
+                if hypot(point.x - position.x, point.y - position.y) <= hitRadius {
+                    return (branch.id, node.id)
+                }
+            }
+        }
+        return nil
     }
 
     private func highlight(ringIndex: Int) {
