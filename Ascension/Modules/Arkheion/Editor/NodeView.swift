@@ -9,13 +9,14 @@ struct NodeView: View {
     static let hitPadding: CGFloat = 20
 
     var body: some View {
-        let base: some View = {
+        let base = ZStack {
+            // Occlude branch lines behind the node
+            Circle().fill(Color.black)
             if node.completed {
-                return AnyView(Circle().fill(node.attribute.color))
-            } else {
-                return AnyView(Circle().stroke(Color.white, lineWidth: 2))
+                Circle().fill(node.attribute.color)
             }
-        }()
+            Circle().stroke(Color.white, lineWidth: 2)
+        }
 
         base
             .frame(width: node.size.radius * 2, height: node.size.radius * 2)
