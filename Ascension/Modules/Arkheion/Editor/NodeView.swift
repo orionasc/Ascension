@@ -9,8 +9,15 @@ struct NodeView: View {
     static let hitPadding: CGFloat = 20
 
     var body: some View {
-        Circle()
-            .fill(node.attribute.color)
+        let base: some View = {
+            if node.completed {
+                return AnyView(Circle().fill(node.attribute.color))
+            } else {
+                return AnyView(Circle().stroke(Color.white, lineWidth: 2))
+            }
+        }()
+
+        base
             .frame(width: node.size.radius * 2, height: node.size.radius * 2)
             .padding(Self.hitPadding)
             .contentShape(Circle().inset(by: -Self.hitPadding))
