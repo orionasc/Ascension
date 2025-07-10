@@ -40,7 +40,7 @@ struct ArkheionMapView: View {
 
                 ZStack {
                     if showGrid {
-                        GridOverlayView()
+                        GridOverlayView(size: geo.size, center: center)
                             .blendMode(.overlay)
                     }
 
