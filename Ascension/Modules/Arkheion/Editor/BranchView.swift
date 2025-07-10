@@ -9,6 +9,8 @@ struct BranchView: View {
     @Binding var selectedNodeID: UUID?
     var onAddNode: () -> Void = {}
 
+    @State private var hoveringBase = false
+
     var body: some View {
         // Starting point of the branch at the ring's edge
         let origin = CGPoint(
@@ -63,9 +65,11 @@ struct BranchView: View {
                 .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [4]))
                 .frame(width: 24, height: 24)
                 .padding(10)
+                .opacity(hoveringBase ? 1 : 0)
                 .contentShape(Circle().inset(by: -10))
                 .position(x: center.x + cos(branch.angle) * ringRadius,
                           y: center.y + sin(branch.angle) * ringRadius)
+                .onHover { hoveringBase = $0 }
                 .onTapGesture(perform: onAddNode)
         }
         .contentShape(branchPath)
