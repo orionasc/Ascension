@@ -7,9 +7,8 @@ struct ArkheionMapView: View {
 
     /// Sample ring data. Later this will be loaded from persistent storage.
     @State private var rings: [Ring] = [
-        Ring(ringIndex: 0, radius: 180, locked: false),
-        Ring(ringIndex: 1, radius: 260, locked: true),
-        Ring(ringIndex: 2, radius: 340, locked: true)
+        Ring(ringIndex: 0, radius: 180, locked: true),
+        Ring(ringIndex: 1, radius: 260, locked: false)
     ]
 
     @State private var branches: [Branch] = []

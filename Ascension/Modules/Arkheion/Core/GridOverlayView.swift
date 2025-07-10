@@ -32,7 +32,7 @@ struct GridOverlayView: View {
                     path.move(to: center)
                     path.addLine(to: CGPoint(x: center.x + cos(angle) * maxRadius,
                                              y: center.y + sin(angle) * maxRadius))
-                    context.stroke(path, with: .color(Color.white.opacity(0.1)), lineWidth: 0.5)
+                    context.stroke(path, with: .color(Color.white.opacity(0.2)), lineWidth: 0.5)
                 }
             }
             .drawingGroup()
