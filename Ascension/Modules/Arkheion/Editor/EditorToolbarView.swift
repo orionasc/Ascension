@@ -74,11 +74,10 @@ struct EditorToolbarView: View {
             Button(action: unlockAllRings) {
                 Label("Unlock All Rings", systemImage: "lock.open")
             }
-            if selectedRingIndex != nil {
-                Button(role: .destructive, action: deleteRing) {
-                    Label("Delete Ring", systemImage: "trash")
-                }
+            Button(role: .destructive, action: deleteRing) {
+                Label("Delete Ring", systemImage: "trash")
             }
+            .disabled(selectedRingIndex == nil)
             if let binding = bindingForRing(selectedRingIndex) {
                 HStack {
                     Text("Radius")
