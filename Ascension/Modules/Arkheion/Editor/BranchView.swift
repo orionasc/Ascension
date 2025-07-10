@@ -10,22 +10,36 @@ struct BranchView: View {
     var onAddNode: () -> Void = {}
 
     var body: some View {
-        // Distance for the branch line extending past the ring
-        let pathLength = CGFloat(branch.nodes.count + 1) * 60
-
         // Starting point of the branch at the ring's edge
         let origin = CGPoint(
             x: center.x + cos(branch.angle) * ringRadius,
             y: center.y + sin(branch.angle) * ringRadius
         )
 
+        let direction = CGPoint(x: cos(branch.angle), y: sin(branch.angle))
+
         let branchPath = Path { path in
-            path.move(to: origin)
-            let end = CGPoint(
-                x: origin.x + cos(branch.angle) * pathLength,
-                y: origin.y + sin(branch.angle) * pathLength
-            )
-            path.addLine(to: end)
+            var start = origin
+            var startRadius: CGFloat = 0
+            for (index, node) in branch.nodes.enumerated() {
+                let distance = ringRadius + CGFloat(index + 1) * 60
+                let position = CGPoint(
+                    x: center.x + direction.x * distance,
+                    y: center.y + direction.y * distance
+                )
+                let segmentStart = CGPoint(
+                    x: start.x + direction.x * startRadius,
+                    y: start.y + direction.y * startRadius
+                )
+                let segmentEnd = CGPoint(
+                    x: position.x - direction.x * node.size.radius,
+                    y: position.y - direction.y * node.size.radius
+                )
+                path.move(to: segmentStart)
+                path.addLine(to: segmentEnd)
+                start = position
+                startRadius = node.size.radius
+            }
         }
 
         ZStack {
@@ -52,6 +66,7 @@ struct BranchView: View {
                 .contentShape(Circle().inset(by: -10))
                 .position(x: center.x + cos(branch.angle) * ringRadius,
                           y: center.y + sin(branch.angle) * ringRadius)
+                .onTapGesture(perform: onAddNode)
         }
         .contentShape(branchPath)
         .zIndex(1)
