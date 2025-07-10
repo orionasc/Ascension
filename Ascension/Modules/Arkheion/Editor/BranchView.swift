@@ -41,19 +41,8 @@ struct BranchView: View {
                     y: center.y + sin(branch.angle) * distance
                 )
 
-                Circle()
-                    .fill(node.attribute.color)
-                    .frame(width: node.size.radius * 2, height: node.size.radius * 2)
-                    .padding(12)
-                    .contentShape(Circle().inset(by: -12))
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white, lineWidth: selectedNodeID == node.id ? 3 : 0)
-                    )
-                    .scaleEffect(selectedNodeID == node.id ? 1.2 : 1.0)
-                    .animation(.easeInOut(duration: 0.2), value: selectedNodeID == node.id)
+                NodeView(node: node, selected: selectedNodeID == node.id)
                     .position(position)
-                    .shadow(color: node.completed ? .clear : node.attribute.color, radius: node.completed ? 0 : 6)
             }
 
             Circle()

@@ -396,7 +396,7 @@ struct ArkheionMapView: View {
                     x: center.x + cos(branch.angle) * distance,
                     y: center.y + sin(branch.angle) * distance
                 )
-                let hitRadius = node.size.radius + 12
+                let hitRadius = node.size.radius + NodeView.hitPadding
                 if hypot(point.x - position.x, point.y - position.y) <= hitRadius {
                     return (branch.id, node.id)
                 }
