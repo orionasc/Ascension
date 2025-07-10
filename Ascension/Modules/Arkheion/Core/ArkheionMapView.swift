@@ -74,8 +74,8 @@ struct ArkheionMapView: View {
                         if let index = hoverRingIndex,
                            let ring = store.rings.first(where: { $0.ringIndex == index }) {
                             Circle()
-                                .fill(Color.white)
-                                .frame(width: 14, height: 14)
+                                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [4]))
+                                .frame(width: 24, height: 24)
                                 .position(
                                     x: center.x + cos(hoverAngle) * ring.radius,
                                     y: center.y + sin(hoverAngle) * ring.radius
@@ -245,7 +245,7 @@ struct ArkheionMapView: View {
     private func addNode(to branchID: UUID) {
         guard let index = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
         let node = Node()
-        store.branches[index].nodes.insert(node, at: 0)
+        store.branches[index].nodes.append(node)
         selectedNodeID = node.id
     }
 
