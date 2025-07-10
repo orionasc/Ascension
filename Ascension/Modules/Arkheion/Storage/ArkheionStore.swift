@@ -34,6 +34,7 @@ final class ArkheionStore: ObservableObject {
             let decoded = try JSONDecoder().decode(CacheData.self, from: data)
             self.rings = decoded.rings
             self.branches = decoded.branches
+            print("[ArkheionStore] Loaded \(rings.count) rings, \(branches.count) branches from \(fileURL.path)")
         } catch {
             // Initialize defaults if loading fails
             self.rings = [
@@ -42,6 +43,7 @@ final class ArkheionStore: ObservableObject {
             ]
             self.branches = []
             save()
+            print("[ArkheionStore] Initialized default data")
         }
     }
 
