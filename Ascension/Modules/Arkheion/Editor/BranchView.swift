@@ -9,6 +9,9 @@ struct BranchView: View {
     @Binding var selectedNodeID: UUID?
     var onAddNode: () -> Void = {}
 
+    /// When hovering the base of the branch we show the dashed add control
+    @State private var hoveringBase = false
+
     var body: some View {
         // Starting point of the branch at the ring's edge
         let origin = CGPoint(
@@ -67,8 +70,10 @@ struct BranchView: View {
                 .contentShape(Circle().inset(by: -10))
                 .position(x: center.x + cos(branch.angle) * ringRadius,
                           y: center.y + sin(branch.angle) * ringRadius)
-
                 .onTapGesture(perform: onAddNode)
+                .onHover { hovering in
+                    hoveringBase = hovering
+                }
         }
         .contentShape(branchPath)
         .zIndex(1)
