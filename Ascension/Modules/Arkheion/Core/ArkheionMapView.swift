@@ -30,6 +30,9 @@ struct ArkheionMapView: View {
     @State private var hoverRingIndex: Int? = nil
     @State private var hoverAngle: Double = 0.0
 
+    /// Scale factor used to expand the invisible hit area around the map.
+    private let interactionScale: CGFloat = 4
+
     var body: some View {
         GeometryReader { geo in
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -89,27 +92,14 @@ struct ArkheionMapView: View {
                         }
                     }
                 }
+
                 .scaleEffect(currentZoom)
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            lastDragLocation = value.location
-                            updateHover(at: value.location, in: geo)
-                        }
-                        .onEnded { value in
-                            handleTap(at: value.location, in: geo)
-                            updateHover(at: value.location, in: geo)
-                        }
-                )
-                .simultaneousGesture(
-                    TapGesture(count: 2)
-                        .onEnded {
-                            let location = lastDragLocation ?? .zero
-                            handleDoubleTap(at: location, in: geo)
-                        }
-                )
+
+                // Expanded invisible layer capturing taps and hovers well
+                // beyond the visible frame.
+                interactionLayer(center: center, geo: geo)
                 
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
@@ -156,6 +146,20 @@ struct ArkheionMapView: View {
         }
     }
 
+    /// Transparent overlay extending the interaction bounds far beyond the
+    /// visible canvas. This ensures taps on distant rings and branches are
+    /// still registered even when they lie outside the default frame.
+    private func interactionLayer(center: CGPoint, geo: GeometryProxy) -> some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: geo.size.width * interactionScale,
+                   height: geo.size.height * interactionScale)
+            .position(center)
+            .contentShape(Rectangle())
+            .gesture(interactionGesture(in: geo))
+            .simultaneousGesture(doubleTapGesture(in: geo))
+    }
+
     // MARK: - Gestures
 
     private var dragGesture: some Gesture {
@@ -177,6 +181,39 @@ struct ArkheionMapView: View {
             .onEnded { value in
                 zoom *= value
             }
+    }
+
+    /// Expanded gesture capturing taps anywhere within the enlarged interaction layer.
+    private func interactionGesture(in geo: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                let location = convert(location: value.location, in: geo)
+                lastDragLocation = location
+                updateHover(at: location, in: geo)
+            }
+            .onEnded { value in
+                let location = convert(location: value.location, in: geo)
+                handleTap(at: location, in: geo)
+                updateHover(at: location, in: geo)
+            }
+    }
+
+    private func doubleTapGesture(in geo: GeometryProxy) -> some Gesture {
+        TapGesture(count: 2)
+            .onEnded {
+                let location = lastDragLocation ?? .zero
+                handleDoubleTap(at: location, in: geo)
+            }
+    }
+
+    /// Converts locations from the oversized interaction layer back to the
+    /// local geometry coordinate space used by the hit testing routines.
+    private func convert(location: CGPoint, in geo: GeometryProxy) -> CGPoint {
+        let size = CGSize(width: geo.size.width * interactionScale,
+                          height: geo.size.height * interactionScale)
+        let origin = CGPoint(x: geo.size.width / 2 - size.width / 2,
+                             y: geo.size.height / 2 - size.height / 2)
+        return CGPoint(x: location.x - origin.x, y: location.y - origin.y)
     }
 
     // MARK: - Controls
