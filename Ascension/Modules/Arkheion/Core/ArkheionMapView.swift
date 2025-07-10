@@ -115,6 +115,9 @@ struct ArkheionMapView: View {
             .gesture(dragGesture.simultaneously(with: zoomGesture))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
+            .onAppear {
+                print("[ArkheionMap] Appeared with \(store.rings.count) rings")
+            }
             .onHover { hovering in
                 if !hovering { hoverRingIndex = nil }
             }
@@ -205,6 +208,7 @@ struct ArkheionMapView: View {
     // MARK: - Interaction
 
     private func onRingTapped(ringIndex: Int, angle: Double) {
+        print("[ArkheionMap] Ring tapped: index=\(ringIndex) angle=\(angle)")
         selectedRingIndex = ringIndex
         selectedBranchID = nil
         selectedNodeID = nil
@@ -232,6 +236,7 @@ struct ArkheionMapView: View {
         let nextIndex = (store.rings.map { $0.ringIndex }.max() ?? 0) + 1
         let baseRadius = (store.rings.map { $0.radius }.max() ?? 100) + 80
         store.rings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
+        print("[ArkheionMap] Added ring index=\(nextIndex)")
     }
 
     private func deleteSelectedRing() {
@@ -250,6 +255,7 @@ struct ArkheionMapView: View {
         let node = Node()
         store.branches[index].nodes.insert(node, at: 0)
         selectedNodeID = node.id
+        print("[ArkheionMap] Added node to branch \(branchID)")
     }
 
     private func unlockAllRings() {
@@ -260,6 +266,7 @@ struct ArkheionMapView: View {
 
     private func createBranch() {
         guard let ringIndex = selectedRingIndex else { return }
+        print("[ArkheionMap] Creating branch on ring \(ringIndex)")
         var branch = Branch(ringIndex: ringIndex, angle: 0)
         branch.nodes.insert(Node(), at: 0)
         store.branches.append(branch)
@@ -311,6 +318,7 @@ struct ArkheionMapView: View {
 
     // MARK: - Tap Handling
     private func handleTap(at location: CGPoint, in geo: GeometryProxy) {
+        print("[ArkheionMap] Tap at \(location)")
         if let hit = hitNode(at: location, in: geo) {
             selectedBranchID = hit.branchID
             selectedNodeID = hit.nodeID
@@ -335,12 +343,14 @@ struct ArkheionMapView: View {
     }
 
     private func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
+        print("[ArkheionMap] Double tap at \(location)")
         guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
         editingRing = RingEditTarget(ringIndex: ringIndex)
     }
 
     private func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
+        print("[ArkheionMap] Long press at \(location)")
         guard let index = nearestRing(at: location, in: geo) else { return }
         toggleLock(for: index)
         highlight(ringIndex: index)
@@ -416,6 +426,7 @@ struct ArkheionMapView: View {
 #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 #endif
+        print("[ArkheionMap] Highlight ring \(ringIndex)")
         highlightedRingIndex = ringIndex
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
             if highlightedRingIndex == ringIndex {
