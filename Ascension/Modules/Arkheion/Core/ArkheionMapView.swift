@@ -206,9 +206,12 @@ struct ArkheionMapView: View {
         selectedBranchID = nil
         selectedNodeID = nil
         guard let ring = store.rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
-        let branch = Branch(ringIndex: ringIndex, angle: angle)
+        var branch = Branch(ringIndex: ringIndex, angle: angle)
+        let node = Node()
+        branch.nodes.append(node)
         store.branches.append(branch)
         selectedBranchID = branch.id
+        selectedNodeID = node.id
     }
 
     private func toggleLock(for ringIndex: Int) {
@@ -254,9 +257,11 @@ struct ArkheionMapView: View {
 
     private func createBranch() {
         guard let ringIndex = selectedRingIndex else { return }
-        let branch = Branch(ringIndex: ringIndex, angle: 0)
+        var branch = Branch(ringIndex: ringIndex, angle: 0)
+        branch.nodes.append(Node())
         store.branches.append(branch)
         selectedBranchID = branch.id
+        selectedNodeID = branch.nodes.first?.id
     }
 
     private func addNodeFromToolbar() {
@@ -432,7 +437,7 @@ struct ArkheionMapView: View {
                 x: center.x + cos(branch.angle) * ring.radius,
                 y: center.y + sin(branch.angle) * ring.radius
             )
-            let length = CGFloat(branch.nodes.count + 1) * 60
+            let length = CGFloat(branch.nodes.count) * 60
             let end = CGPoint(
                 x: origin.x + cos(branch.angle) * length,
                 y: origin.y + sin(branch.angle) * length
