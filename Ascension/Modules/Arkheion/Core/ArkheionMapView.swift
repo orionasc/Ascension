@@ -5,13 +5,8 @@ import SwiftUI
 /// versions will layer rings, branches and nodes on top of this canvas.
 struct ArkheionMapView: View {
 
-    /// Sample ring data. Later this will be loaded from persistent storage.
-    @State private var rings: [Ring] = [
-        Ring(ringIndex: 0, radius: 180, locked: true),
-        Ring(ringIndex: 1, radius: 260, locked: false)
-    ]
-
-    @State private var branches: [Branch] = []
+    /// Data store handling persistence of rings and branches
+    @StateObject private var store = ArkheionStore()
     /// Holds the ring currently being edited.
     @State private var editingRing: RingEditTarget?
     /// Ring briefly highlighted after a tap
@@ -54,7 +49,7 @@ struct ArkheionMapView: View {
                             .frame(width: 140, height: 140)
                             .position(center)
 
-                        ForEach(rings) { ring in
+                        ForEach(store.rings) { ring in
                             RingView(
                                 ring: ring,
                                 center: center,
@@ -62,8 +57,8 @@ struct ArkheionMapView: View {
                             )
                         }
 
-                        ForEach($branches) { $branch in
-                            if let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) {
+                        ForEach($store.branches) { $branch in
+                            if let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) {
                                 BranchView(
                                     branch: $branch,
                                     center: center,
@@ -77,7 +72,7 @@ struct ArkheionMapView: View {
                         }
 
                         if let index = hoverRingIndex,
-                           let ring = rings.first(where: { $0.ringIndex == index }) {
+                           let ring = store.rings.first(where: { $0.ringIndex == index }) {
                             Circle()
                                 .fill(Color.white)
                                 .frame(width: 14, height: 14)
@@ -135,8 +130,8 @@ struct ArkheionMapView: View {
             }
             .overlay(alignment: .trailing) {
                 EditorToolbarView(
-                    rings: $rings,
-                    branches: $branches,
+                    rings: $store.rings,
+                    branches: $store.branches,
                     selectedRingIndex: $selectedRingIndex,
                     selectedBranchID: $selectedBranchID,
                     selectedNodeID: $selectedNodeID,
@@ -210,34 +205,34 @@ struct ArkheionMapView: View {
         selectedRingIndex = ringIndex
         selectedBranchID = nil
         selectedNodeID = nil
-        guard let ring = rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
+        guard let ring = store.rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
         let branch = Branch(ringIndex: ringIndex, angle: angle)
-        branches.append(branch)
+        store.branches.append(branch)
         selectedBranchID = branch.id
     }
 
     private func toggleLock(for ringIndex: Int) {
-        if let index = rings.firstIndex(where: { $0.ringIndex == ringIndex }) {
-            rings[index].locked.toggle()
+        if let index = store.rings.firstIndex(where: { $0.ringIndex == ringIndex }) {
+            store.rings[index].locked.toggle()
         }
     }
 
     private func bindingForRing(_ index: Int) -> Binding<Ring>? {
-        guard let idx = rings.firstIndex(where: { $0.ringIndex == index }) else { return nil }
-        return $rings[idx]
+        guard let idx = store.rings.firstIndex(where: { $0.ringIndex == index }) else { return nil }
+        return $store.rings[idx]
     }
 
     private func addRing() {
-        let nextIndex = (rings.map { $0.ringIndex }.max() ?? 0) + 1
-        let baseRadius = (rings.map { $0.radius }.max() ?? 100) + 80
-        rings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
+        let nextIndex = (store.rings.map { $0.ringIndex }.max() ?? 0) + 1
+        let baseRadius = (store.rings.map { $0.radius }.max() ?? 100) + 80
+        store.rings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
     }
 
     private func deleteSelectedRing() {
         guard let ringIndex = selectedRingIndex else { return }
-        guard rings.count > 1 else { return }
-        rings.removeAll { $0.ringIndex == ringIndex }
-        branches.removeAll { $0.ringIndex == ringIndex }
+        guard store.rings.count > 1 else { return }
+        store.rings.removeAll { $0.ringIndex == ringIndex }
+        store.branches.removeAll { $0.ringIndex == ringIndex }
         if editingRing?.ringIndex == ringIndex { editingRing = nil }
         selectedRingIndex = nil
         selectedBranchID = nil
@@ -245,22 +240,22 @@ struct ArkheionMapView: View {
     }
 
     private func addNode(to branchID: UUID) {
-        guard let index = branches.firstIndex(where: { $0.id == branchID }) else { return }
+        guard let index = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
         let node = Node()
-        branches[index].nodes.insert(node, at: 0)
+        store.branches[index].nodes.insert(node, at: 0)
         selectedNodeID = node.id
     }
 
     private func unlockAllRings() {
-        for index in rings.indices {
-            rings[index].locked = false
+        for index in store.rings.indices {
+            store.rings[index].locked = false
         }
     }
 
     private func createBranch() {
         guard let ringIndex = selectedRingIndex else { return }
         let branch = Branch(ringIndex: ringIndex, angle: 0)
-        branches.append(branch)
+        store.branches.append(branch)
         selectedBranchID = branch.id
     }
 
@@ -271,35 +266,35 @@ struct ArkheionMapView: View {
 
     private func deleteSelectedBranch() {
         guard let id = selectedBranchID else { return }
-        branches.removeAll { $0.id == id }
+        store.branches.removeAll { $0.id == id }
         selectedBranchID = nil
         selectedNodeID = nil
     }
 
     private func deleteSelectedNode() {
         guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
-        guard let bIndex = branches.firstIndex(where: { $0.id == branchID }) else { return }
-        branches[bIndex].nodes.removeAll { $0.id == nodeID }
+        guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
+        store.branches[bIndex].nodes.removeAll { $0.id == nodeID }
         selectedNodeID = nil
     }
 
     private func moveSelectedNodeUp() {
         guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
-        guard let bIndex = branches.firstIndex(where: { $0.id == branchID }) else { return }
-        guard let nIndex = branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex > 0 else { return }
-        branches[bIndex].nodes.swapAt(nIndex, nIndex - 1)
+        guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
+        guard let nIndex = store.branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex > 0 else { return }
+        store.branches[bIndex].nodes.swapAt(nIndex, nIndex - 1)
     }
 
     private func moveSelectedNodeDown() {
         guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
-        guard let bIndex = branches.firstIndex(where: { $0.id == branchID }) else { return }
-        guard let nIndex = branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex < branches[bIndex].nodes.count - 1 else { return }
-        branches[bIndex].nodes.swapAt(nIndex, nIndex + 1)
+        guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
+        guard let nIndex = store.branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex < store.branches[bIndex].nodes.count - 1 else { return }
+        store.branches[bIndex].nodes.swapAt(nIndex, nIndex + 1)
     }
 
     /// Calculates completion progress for a ring based on nodes finished.
     private func progress(for ringIndex: Int) -> Double {
-        let ringBranches = branches.filter { $0.ringIndex == ringIndex }
+        let ringBranches = store.branches.filter { $0.ringIndex == ringIndex }
         let nodes = ringBranches.flatMap { $0.nodes }
         guard !nodes.isEmpty else { return 0 }
         let completed = nodes.filter { $0.completed }.count
@@ -353,7 +348,7 @@ struct ArkheionMapView: View {
         point.x = center.x + (point.x - center.x) / currentZoom
         point.y = center.y + (point.y - center.y) / currentZoom
         let distance = hypot(point.x - center.x, point.y - center.y)
-        return rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) })?.ringIndex
+        return store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) })?.ringIndex
     }
 
     /// Returns the ring index and angle if the location hovers a ring edge
@@ -367,7 +362,7 @@ struct ArkheionMapView: View {
         point.y = center.y + (point.y - center.y) / currentZoom
         let distance = hypot(point.x - center.x, point.y - center.y)
         let angle = atan2(point.y - center.y, point.x - center.x)
-        guard let ring = rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
+        guard let ring = store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
         if abs(distance - ring.radius) <= 20 {
             return (ring.ringIndex, Double(angle))
         }
@@ -393,8 +388,8 @@ struct ArkheionMapView: View {
         point.x = center.x + (point.x - center.x) / currentZoom
         point.y = center.y + (point.y - center.y) / currentZoom
 
-        for branch in branches {
-            guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
+        for branch in store.branches {
+            guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             for (idx, node) in branch.nodes.enumerated() {
                 let distance = ring.radius + CGFloat(idx + 1) * 60
                 let position = CGPoint(
@@ -431,8 +426,8 @@ struct ArkheionMapView: View {
         point.x = center.x + (point.x - center.x) / currentZoom
         point.y = center.y + (point.y - center.y) / currentZoom
 
-        for branch in branches {
-            guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
+        for branch in store.branches {
+            guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             let origin = CGPoint(
                 x: center.x + cos(branch.angle) * ring.radius,
                 y: center.y + sin(branch.angle) * ring.radius

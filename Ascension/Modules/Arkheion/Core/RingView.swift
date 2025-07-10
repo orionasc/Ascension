@@ -4,8 +4,8 @@ import UIKit
 #endif
 
 /// Data model representing a single concentric ring in the Arkheion map.
-struct Ring: Identifiable {
-    let id = UUID()
+struct Ring: Identifiable, Codable {
+    var id = UUID()
     var ringIndex: Int
     var radius: CGFloat
     var locked: Bool
