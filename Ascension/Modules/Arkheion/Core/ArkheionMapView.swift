@@ -87,7 +87,7 @@ struct ArkheionMapView: View {
                                 .animation(.easeInOut(duration: 0.2), value: hoverRingIndex)
                                 .onTapGesture {
                                     highlight(ringIndex: index)
-                                    onRingTapped(ringIndex: index, angle: hoverAngle)
+                                    // onRingTapped is reserved for double taps or explicit adds
                                 }
                         }
                     }
@@ -257,6 +257,7 @@ struct ArkheionMapView: View {
         selectedRingIndex = ringIndex
         selectedBranchID = nil
         selectedNodeID = nil
+        print("[ArkheionMap] Selected ring: \(ringIndex)")
         guard let ring = store.rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
         var branch = Branch(ringIndex: ringIndex, angle: angle)
         let node = Node()
@@ -264,6 +265,8 @@ struct ArkheionMapView: View {
         store.branches.append(branch)
         selectedBranchID = branch.id
         selectedNodeID = node.id
+        print("[ArkheionMap] Selected branch: \(branch.id)")
+        print("[ArkheionMap] Selected node: \(node.id)")
     }
 
     private func toggleLock(for ringIndex: Int) {
@@ -368,6 +371,7 @@ struct ArkheionMapView: View {
             selectedBranchID = hit.branchID
             selectedNodeID = hit.nodeID
             selectedRingIndex = nil
+            print("[ArkheionMap] Selected node: \(hit.nodeID)")
             return
         }
 
@@ -375,11 +379,17 @@ struct ArkheionMapView: View {
             selectedBranchID = branchID
             selectedNodeID = nil
             selectedRingIndex = nil
+            print("[ArkheionMap] Selected branch: \(branchID)")
             return
         }
 
         if let (ringIndex, _) = ringHit(at: location, in: geo) {
             highlight(ringIndex: ringIndex)
+            selectedRingIndex = ringIndex
+            selectedBranchID = nil
+            selectedNodeID = nil
+            print("[ArkheionMap] Selected ring: \(ringIndex)")
+            return
         } else {
             selectedRingIndex = nil
             selectedBranchID = nil

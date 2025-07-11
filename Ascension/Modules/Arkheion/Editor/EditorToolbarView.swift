@@ -100,6 +100,7 @@ struct EditorToolbarView: View {
                     Label("Delete Branch", systemImage: "trash")
                 }
             }
+            /*
             Picker("Ring", selection: $selectedRingIndex) {
                 Text("None").tag(Int?.none)
                 ForEach(rings) { ring in
@@ -107,6 +108,7 @@ struct EditorToolbarView: View {
                 }
             }
             .pickerStyle(.menu)
+            */
 
             if let branchBinding = bindingForBranch(selectedBranchID) {
                 VStack(alignment: .leading) {
