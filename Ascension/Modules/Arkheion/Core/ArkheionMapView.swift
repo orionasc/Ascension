@@ -213,7 +213,7 @@ struct ArkheionMapView: View {
                           height: geo.size.height * interactionScale)
         let origin = CGPoint(x: geo.size.width / 2 - size.width / 2,
                              y: geo.size.height / 2 - size.height / 2)
-        return CGPoint(x: location.x - origin.x, y: location.y - origin.y)
+        return CGPoint(x: location.x + origin.x, y: location.y + origin.y)
     }
 
     // MARK: - Controls
