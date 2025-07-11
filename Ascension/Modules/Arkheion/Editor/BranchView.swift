@@ -15,11 +15,12 @@ struct BranchView: View {
     var body: some View {
         // Starting point of the branch at the ring's edge
         let origin = CGPoint(
-            x: center.x + cos(branch.angle) * ringRadius,
-            y: center.y + sin(branch.angle) * ringRadius
+            x: center.x + CGFloat(Darwin.cos(branch.angle)) * ringRadius,
+            y: center.y + CGFloat(Darwin.sin(branch.angle)) * ringRadius
         )
 
-        let direction = CGPoint(x: cos(branch.angle), y: sin(branch.angle))
+        let direction = CGPoint(x: CGFloat(Darwin.cos(branch.angle)),
+                                y: CGFloat(Darwin.sin(branch.angle)))
 
         let branchPath = Path { path in
             var start = origin
@@ -54,8 +55,8 @@ struct BranchView: View {
             ForEach(Array(branch.nodes.enumerated()), id: \.1.id) { index, node in
                 let distance = ringRadius + CGFloat(index + 1) * 60
                 let position = CGPoint(
-                    x: center.x + cos(branch.angle) * distance,
-                    y: center.y + sin(branch.angle) * distance
+                    x: center.x + CGFloat(Darwin.cos(branch.angle)) * distance,
+                    y: center.y + CGFloat(Darwin.sin(branch.angle)) * distance
                 )
 
                 NodeView(node: node, selected: selectedNodeID == node.id)
@@ -68,8 +69,8 @@ struct BranchView: View {
                 .padding(10)
                 .opacity(hoveringBase ? 1 : 0)
                 .contentShape(Circle().inset(by: -10))
-                .position(x: center.x + cos(branch.angle) * ringRadius,
-                          y: center.y + sin(branch.angle) * ringRadius)
+                .position(x: center.x + CGFloat(Darwin.cos(branch.angle)) * ringRadius,
+                          y: center.y + CGFloat(Darwin.sin(branch.angle)) * ringRadius)
                 .onTapGesture(perform: onAddNode)
                 .onHover { hovering in
                     hoveringBase = hovering

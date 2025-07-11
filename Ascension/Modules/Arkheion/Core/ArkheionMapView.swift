@@ -80,8 +80,8 @@ struct ArkheionMapView: View {
                                 .fill(Color.white)
                                 .frame(width: 14, height: 14)
                                 .position(
-                                    x: center.x + cos(hoverAngle) * ring.radius,
-                                    y: center.y + sin(hoverAngle) * ring.radius
+                                    x: center.x + CGFloat(Darwin.cos(hoverAngle)) * ring.radius,
+                                    y: center.y + CGFloat(Darwin.sin(hoverAngle)) * ring.radius
                                 )
                                 .opacity(0.9)
                                 .animation(.easeInOut(duration: 0.2), value: hoverRingIndex)
@@ -467,10 +467,10 @@ struct ArkheionMapView: View {
             guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             for (idx, node) in branch.nodes.enumerated() {
                 let distance = ring.radius + CGFloat(idx + 1) * 60
-                let position = CGPoint(
-                    x: center.x + cos(branch.angle) * distance,
-                    y: center.y + sin(branch.angle) * distance
-                )
+                    let position = CGPoint(
+                        x: center.x + CGFloat(Darwin.cos(branch.angle)) * distance,
+                        y: center.y + CGFloat(Darwin.sin(branch.angle)) * distance
+                    )
                 let hitRadius = node.size.radius + NodeView.hitPadding
                 if hypot(point.x - position.x, point.y - position.y) <= hitRadius {
                     print("[ArkheionMap] hitNode -> branch=\(branch.id) node=\(node.id)")
@@ -506,13 +506,13 @@ struct ArkheionMapView: View {
         for branch in store.branches {
             guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             let origin = CGPoint(
-                x: center.x + cos(branch.angle) * ring.radius,
-                y: center.y + sin(branch.angle) * ring.radius
+                x: center.x + CGFloat(Darwin.cos(branch.angle)) * ring.radius,
+                y: center.y + CGFloat(Darwin.sin(branch.angle)) * ring.radius
             )
             let length = CGFloat(branch.nodes.count) * 60
             let end = CGPoint(
-                x: origin.x + cos(branch.angle) * length,
-                y: origin.y + sin(branch.angle) * length
+                x: origin.x + CGFloat(Darwin.cos(branch.angle)) * length,
+                y: origin.y + CGFloat(Darwin.sin(branch.angle)) * length
             )
             if distance(from: point, toSegment: origin, end: end) <= 20 {
                 print("[ArkheionMap] hitBranch -> id=\(branch.id)")

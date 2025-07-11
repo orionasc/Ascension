@@ -52,8 +52,8 @@ struct AscensionHomeView: View {
                         }
                     }
                     .offset(
-                        x: radius * cos(module.angle),
-                        y: radius * sin(module.angle)
+                        x: radius * CGFloat(Darwin.cos(module.angle)),
+                        y: radius * CGFloat(Darwin.sin(module.angle))
                     )
                 }
 
