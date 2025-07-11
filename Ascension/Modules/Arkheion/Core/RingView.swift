@@ -36,6 +36,8 @@ struct RingView: View {
         .padding(20)
         .position(x: center.x, y: center.y)
         .shadow(color: ring.locked ? .clear : Color.white.opacity(0.5), radius: ring.locked ? 0 : 4)
+        .contentShape(Rectangle())
+        .allowsHitTesting(true)
     }
 }
 
