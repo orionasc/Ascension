@@ -33,8 +33,8 @@ struct GridOverlayView: View {
                 let angle = Double(i) / Double(segmentCount) * 2 * .pi
                 var path = Path()
                 path.move(to: center)
-                path.addLine(to: CGPoint(x: center.x + cos(angle) * maxRadius,
-                                         y: center.y + sin(angle) * maxRadius))
+                path.addLine(to: CGPoint(x: center.x + CGFloat(Darwin.cos(angle)) * maxRadius,
+                                         y: center.y + CGFloat(Darwin.sin(angle)) * maxRadius))
                 context.stroke(path, with: .color(Color.white.opacity(0.2)), lineWidth: 0.5)
             }
         }

@@ -38,8 +38,8 @@ struct RadialNavMenuView: View {
                     let angle = Double.pi * (1 - progress)
                     let radius = geo.size.width / 2 * 0.75
                     let center = CGPoint(x: geo.size.width / 2, y: 0)
-                    let x = center.x + radius * cos(angle)
-                    let y = center.y + radius * sin(angle)
+                    let x = center.x + radius * CGFloat(Darwin.cos(angle))
+                    let y = center.y + radius * CGFloat(Darwin.sin(angle))
 
                     Button(action: item.action) {
                         Image(systemName: item.icon)
