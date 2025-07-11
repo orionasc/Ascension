@@ -314,12 +314,13 @@ struct ArkheionMapView: View {
 
     private func createBranch() {
         guard let ringIndex = selectedRingIndex else { return }
-        print("[ArkheionMap] Creating branch on ring \(ringIndex)")
-        var branch = Branch(ringIndex: ringIndex, angle: 0)
-        branch.nodes.insert(Node(), at: 0)
+        let angle = hoverAngle
+        var branch = Branch(ringIndex: ringIndex, angle: angle)
+        let node = Node()
+        branch.nodes.insert(node, at: 0)
         store.branches.append(branch)
         selectedBranchID = branch.id
-        selectedNodeID = branch.nodes.first?.id
+        selectedNodeID = node.id
     }
 
     private func addNodeFromToolbar() {
@@ -401,7 +402,8 @@ struct ArkheionMapView: View {
         print("[ArkheionMap] Double tap at \(location)")
         guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
-        editingRing = RingEditTarget(ringIndex: ringIndex)
+        selectedRingIndex = ringIndex
+        createBranch()
     }
 
     private func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
