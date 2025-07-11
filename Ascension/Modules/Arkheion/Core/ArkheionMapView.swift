@@ -100,6 +100,16 @@ struct ArkheionMapView: View {
                 // Expanded invisible layer capturing taps and hovers well
                 // beyond the visible frame.
                 interactionLayer(center: center, geo: geo)
+
+                TapCaptureView(
+                    onTap: { handleTap(at: convert(location: $0, in: geo), in: geo) },
+                    onDoubleTap: { handleDoubleTap(at: convert(location: $0, in: geo), in: geo) },
+                    onLongPress: { handleLongPress(at: convert(location: $0, in: geo), in: geo) }
+                )
+                .frame(width: geo.size.width * interactionScale,
+                       height: geo.size.height * interactionScale)
+                .position(center)
+                .zIndex(999)
                 
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
@@ -156,8 +166,6 @@ struct ArkheionMapView: View {
                    height: geo.size.height * interactionScale)
             .position(center)
             .contentShape(Rectangle())
-            .gesture(interactionGesture(in: geo))
-            .simultaneousGesture(doubleTapGesture(in: geo))
     }
 
     // MARK: - Gestures
@@ -418,6 +426,7 @@ struct ArkheionMapView: View {
         let angle = atan2(point.y - center.y, point.x - center.x)
         guard let ring = store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
         if abs(distance - ring.radius) <= 20 {
+            print("[ArkheionMap] ringHit -> index=\(ring.ringIndex) angle=\(angle)")
             return (ring.ringIndex, Double(angle))
         }
 
@@ -452,6 +461,7 @@ struct ArkheionMapView: View {
                 )
                 let hitRadius = node.size.radius + NodeView.hitPadding
                 if hypot(point.x - position.x, point.y - position.y) <= hitRadius {
+                    print("[ArkheionMap] hitNode -> branch=\(branch.id) node=\(node.id)")
                     return (branch.id, node.id)
                 }
             }
@@ -493,6 +503,7 @@ struct ArkheionMapView: View {
                 y: origin.y + sin(branch.angle) * length
             )
             if distance(from: point, toSegment: origin, end: end) <= 20 {
+                print("[ArkheionMap] hitBranch -> id=\(branch.id)")
                 return branch.id
             }
         }

@@ -75,7 +75,8 @@ struct BranchView: View {
                     hoveringBase = hovering
                 }
         }
-        .contentShape(branchPath)
+        .contentShape(Rectangle())
+        .allowsHitTesting(true)
         .zIndex(1)
     }
 }
