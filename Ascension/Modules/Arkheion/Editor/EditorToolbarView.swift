@@ -124,10 +124,13 @@ struct EditorToolbarView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Node Controls")
                 .font(.headline)
+            let validBranchSelected = selectedBranchID.flatMap { id in
+                branches.contains(where: { $0.id == id })
+            } ?? false
             Button(action: addNode) {
                 Label("Add Node", systemImage: "plus")
             }
-            .disabled(selectedBranchID == nil)
+            .disabled(!validBranchSelected)
             if selectedNodeID != nil {
                 HStack {
                     Button(action: moveNodeUp) {

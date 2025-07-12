@@ -322,7 +322,13 @@ struct ArkheionMapView: View {
     }
 
     private func addNode(to branchID: UUID) {
-        guard let index = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
+        let branchIDs = store.branches.map { $0.id }
+        print("[ArkheionMap] addNode -> selectedBranchID=\(String(describing: selectedBranchID))")
+        print("[ArkheionMap] Current branches: \(branchIDs)")
+        guard let index = store.branches.firstIndex(where: { $0.id == branchID }) else {
+            print("[ArkheionMap] addNode aborted: branch \(branchID) not found")
+            return
+        }
         let node = Node()
         store.branches[index].nodes.insert(node, at: 0)
         selectedNodeID = node.id
@@ -354,7 +360,15 @@ struct ArkheionMapView: View {
     }
 
     private func addNodeFromToolbar() {
-        guard let branchID = selectedBranchID else { return }
+        guard let branchID = selectedBranchID else {
+            print("[ArkheionMap] addNodeFromToolbar called with no branch selected")
+            return
+        }
+        guard store.branches.contains(where: { $0.id == branchID }) else {
+            print("[ArkheionMap] addNodeFromToolbar aborted: selected branch \(branchID) missing")
+            selectedBranchID = nil
+            return
+        }
         addNode(to: branchID)
     }
 
