@@ -346,11 +346,11 @@ struct ArkheionMapView: View {
     }
 
     private func createBranchFromToolbar() {
-        guard hoverRingIndex != nil else {
-            print("[ArkheionMap] Cannot create branch: no ring hovered")
+        guard selectedRingIndex != nil else {
+            print("[ArkheionMap] Cannot create branch: no ring selected")
             return
         }
-        createBranch(at: hoverAngle)
+        createBranch(at: 0.0)
     }
 
     private func addNodeFromToolbar() {
@@ -437,7 +437,7 @@ struct ArkheionMapView: View {
         // Calculate the angle of the tap relative to the map center
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
-        let angle = atan2(point.y - center.y, point.x - center.x)
+        let angle = atan2(center.y - point.y, point.x - center.x)
         print("[ArkheionMap] Computed angle \(angle)")
 
         createBranch(at: Double(angle))
@@ -462,7 +462,7 @@ struct ArkheionMapView: View {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
         let distance = hypot(point.x - center.x, point.y - center.y)
-        let angle = atan2(point.y - center.y, point.x - center.x)
+        let angle = atan2(center.y - point.y, point.x - center.x)
         guard let ring = store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
         if abs(distance - ring.radius) <= 20 {
             print("[ArkheionMap] ringHit -> index=\(ring.ringIndex) angle=\(angle)")
