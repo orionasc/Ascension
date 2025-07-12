@@ -224,6 +224,18 @@ struct ArkheionMapView: View {
         return CGPoint(x: location.x + origin.x, y: location.y + origin.y)
     }
 
+    /// Transforms a point from view coordinates into unscaled canvas space.
+    private func canvasPoint(from location: CGPoint, in geo: GeometryProxy) -> CGPoint {
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let currentZoom = zoom * gestureZoom
+        var point = location
+        point.x -= offset.width + dragTranslation.width
+        point.y -= offset.height + dragTranslation.height
+        point.x = center.x + (point.x - center.x) / currentZoom
+        point.y = center.y + (point.y - center.y) / currentZoom
+        return point
+    }
+
     // MARK: - Controls
 
     private var gridToggleButton: some View {
@@ -323,6 +335,10 @@ struct ArkheionMapView: View {
     }
 
     private func createBranchFromToolbar() {
+        guard hoverRingIndex != nil else {
+            print("[ArkheionMap] Cannot create branch: no ring hovered")
+            return
+        }
         createBranch(at: hoverAngle)
     }
 
@@ -409,13 +425,9 @@ struct ArkheionMapView: View {
 
         // Calculate the angle of the tap relative to the map center
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let currentZoom = zoom * gestureZoom
-        var point = location
-        point.x -= offset.width + dragTranslation.width
-        point.y -= offset.height + dragTranslation.height
-        point.x = center.x + (point.x - center.x) / currentZoom
-        point.y = center.y + (point.y - center.y) / currentZoom
+        let point = canvasPoint(from: location, in: geo)
         let angle = atan2(point.y - center.y, point.x - center.x)
+        print("[ArkheionMap] Computed angle \(angle)")
 
         createBranch(at: Double(angle))
     }
@@ -429,12 +441,7 @@ struct ArkheionMapView: View {
 
     private func nearestRing(at location: CGPoint, in geo: GeometryProxy) -> Int? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let currentZoom = zoom * gestureZoom
-        var point = location
-        point.x -= offset.width + dragTranslation.width
-        point.y -= offset.height + dragTranslation.height
-        point.x = center.x + (point.x - center.x) / currentZoom
-        point.y = center.y + (point.y - center.y) / currentZoom
+        let point = canvasPoint(from: location, in: geo)
         let distance = hypot(point.x - center.x, point.y - center.y)
         return store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) })?.ringIndex
     }
@@ -442,12 +449,7 @@ struct ArkheionMapView: View {
     /// Returns the ring index and angle if the location hovers a ring edge
     private func ringHit(at location: CGPoint, in geo: GeometryProxy) -> (Int, Double)? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let currentZoom = zoom * gestureZoom
-        var point = location
-        point.x -= offset.width + dragTranslation.width
-        point.y -= offset.height + dragTranslation.height
-        point.x = center.x + (point.x - center.x) / currentZoom
-        point.y = center.y + (point.y - center.y) / currentZoom
+        let point = canvasPoint(from: location, in: geo)
         let distance = hypot(point.x - center.x, point.y - center.y)
         let angle = atan2(point.y - center.y, point.x - center.x)
         guard let ring = store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
@@ -470,12 +472,7 @@ struct ArkheionMapView: View {
 
     private func hitNode(at location: CGPoint, in geo: GeometryProxy) -> (branchID: UUID, nodeID: UUID)? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let currentZoom = zoom * gestureZoom
-        var point = location
-        point.x -= offset.width + dragTranslation.width
-        point.y -= offset.height + dragTranslation.height
-        point.x = center.x + (point.x - center.x) / currentZoom
-        point.y = center.y + (point.y - center.y) / currentZoom
+        let point = canvasPoint(from: location, in: geo)
 
         for branch in store.branches {
             guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
@@ -510,12 +507,7 @@ struct ArkheionMapView: View {
 
     private func hitBranch(at location: CGPoint, in geo: GeometryProxy) -> UUID? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let currentZoom = zoom * gestureZoom
-        var point = location
-        point.x -= offset.width + dragTranslation.width
-        point.y -= offset.height + dragTranslation.height
-        point.x = center.x + (point.x - center.x) / currentZoom
-        point.y = center.y + (point.y - center.y) / currentZoom
+        let point = canvasPoint(from: location, in: geo)
 
         for branch in store.branches {
             guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
