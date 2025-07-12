@@ -285,7 +285,9 @@ struct ArkheionMapView: View {
         var branch = Branch(ringIndex: ringIndex, angle: angle)
         let node = Node()
         branch.nodes.insert(node, at: 0)
-        store.branches.append(branch)
+        var updatedBranches = store.branches
+        updatedBranches.append(branch)
+        store.branches = updatedBranches
         selectedBranchID = branch.id
         selectedNodeID = node.id
         print("[ArkheionMap] Selected branch: \(branch.id)")
@@ -294,7 +296,9 @@ struct ArkheionMapView: View {
 
     private func toggleLock(for ringIndex: Int) {
         if let index = store.rings.firstIndex(where: { $0.ringIndex == ringIndex }) {
-            store.rings[index].locked.toggle()
+            var updatedRings = store.rings
+            updatedRings[index].locked.toggle()
+            store.rings = updatedRings
         }
     }
 
@@ -306,15 +310,21 @@ struct ArkheionMapView: View {
     private func addRing() {
         let nextIndex = (store.rings.map { $0.ringIndex }.max() ?? 0) + 1
         let baseRadius = (store.rings.map { $0.radius }.max() ?? 100) + 80
-        store.rings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
+        var updatedRings = store.rings
+        updatedRings.append(Ring(ringIndex: nextIndex, radius: baseRadius, locked: true))
+        store.rings = updatedRings
         print("[ArkheionMap] Added ring index=\(nextIndex)")
     }
 
     private func deleteSelectedRing() {
         guard let ringIndex = selectedRingIndex else { return }
         guard store.rings.count > 1 else { return }
-        store.rings.removeAll { $0.ringIndex == ringIndex }
-        store.branches.removeAll { $0.ringIndex == ringIndex }
+        var updatedRings = store.rings
+        updatedRings.removeAll { $0.ringIndex == ringIndex }
+        store.rings = updatedRings
+        var updatedBranches = store.branches
+        updatedBranches.removeAll { $0.ringIndex == ringIndex }
+        store.branches = updatedBranches
         if editingRing?.ringIndex == ringIndex { editingRing = nil }
         selectedRingIndex = nil
         selectedBranchID = nil
@@ -330,15 +340,19 @@ struct ArkheionMapView: View {
             return
         }
         let node = Node()
-        store.branches[index].nodes.insert(node, at: 0)
+        var updatedBranches = store.branches
+        updatedBranches[index].nodes.insert(node, at: 0)
+        store.branches = updatedBranches
         selectedNodeID = node.id
         print("[ArkheionMap] Added node to branch \(branchID)")
     }
 
     private func unlockAllRings() {
-        for index in store.rings.indices {
-            store.rings[index].locked = false
+        var updatedRings = store.rings
+        for index in updatedRings.indices {
+            updatedRings[index].locked = false
         }
+        store.rings = updatedRings
     }
 
     private func createBranch(at angle: Double) {
@@ -346,7 +360,9 @@ struct ArkheionMapView: View {
         var branch = Branch(ringIndex: ringIndex, angle: angle)
         let node = Node()
         branch.nodes.insert(node, at: 0)
-        store.branches.append(branch)
+        var updatedBranches = store.branches
+        updatedBranches.append(branch)
+        store.branches = updatedBranches
         selectedBranchID = branch.id
         selectedNodeID = node.id
     }
@@ -374,7 +390,9 @@ struct ArkheionMapView: View {
 
     private func deleteSelectedBranch() {
         guard let id = selectedBranchID else { return }
-        store.branches.removeAll { $0.id == id }
+        var updatedBranches = store.branches
+        updatedBranches.removeAll { $0.id == id }
+        store.branches = updatedBranches
         selectedBranchID = nil
         selectedNodeID = nil
     }
@@ -382,7 +400,9 @@ struct ArkheionMapView: View {
     private func deleteSelectedNode() {
         guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
         guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
-        store.branches[bIndex].nodes.removeAll { $0.id == nodeID }
+        var updatedBranches = store.branches
+        updatedBranches[bIndex].nodes.removeAll { $0.id == nodeID }
+        store.branches = updatedBranches
         selectedNodeID = nil
     }
 
@@ -390,14 +410,18 @@ struct ArkheionMapView: View {
         guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
         guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
         guard let nIndex = store.branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex > 0 else { return }
-        store.branches[bIndex].nodes.swapAt(nIndex, nIndex - 1)
+        var updatedBranches = store.branches
+        updatedBranches[bIndex].nodes.swapAt(nIndex, nIndex - 1)
+        store.branches = updatedBranches
     }
 
     private func moveSelectedNodeDown() {
         guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
         guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
         guard let nIndex = store.branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex < store.branches[bIndex].nodes.count - 1 else { return }
-        store.branches[bIndex].nodes.swapAt(nIndex, nIndex + 1)
+        var updatedBranches = store.branches
+        updatedBranches[bIndex].nodes.swapAt(nIndex, nIndex + 1)
+        store.branches = updatedBranches
     }
 
     /// Calculates completion progress for a ring based on nodes finished.
