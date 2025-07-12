@@ -144,7 +144,7 @@ struct ArkheionMapView: View {
                     addRing: addRing,
                     unlockAllRings: unlockAllRings,
                     deleteRing: deleteSelectedRing,
-                    createBranch: createBranch,
+                    createBranch: createBranchFromToolbar,
                     addNode: addNodeFromToolbar,
                     deleteBranch: deleteSelectedBranch,
                     deleteNode: deleteSelectedNode,
@@ -312,15 +312,18 @@ struct ArkheionMapView: View {
         }
     }
 
-    private func createBranch() {
+    private func createBranch(at angle: Double) {
         guard let ringIndex = selectedRingIndex else { return }
-        let angle = hoverAngle
         var branch = Branch(ringIndex: ringIndex, angle: angle)
         let node = Node()
         branch.nodes.insert(node, at: 0)
         store.branches.append(branch)
         selectedBranchID = branch.id
         selectedNodeID = node.id
+    }
+
+    private func createBranchFromToolbar() {
+        createBranch(at: hoverAngle)
     }
 
     private func addNodeFromToolbar() {
@@ -403,7 +406,18 @@ struct ArkheionMapView: View {
         guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
         selectedRingIndex = ringIndex
-        createBranch()
+
+        // Calculate the angle of the tap relative to the map center
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        let currentZoom = zoom * gestureZoom
+        var point = location
+        point.x -= offset.width + dragTranslation.width
+        point.y -= offset.height + dragTranslation.height
+        point.x = center.x + (point.x - center.x) / currentZoom
+        point.y = center.y + (point.y - center.y) / currentZoom
+        let angle = atan2(point.y - center.y, point.x - center.x)
+
+        createBranch(at: Double(angle))
     }
 
     private func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
