@@ -224,7 +224,19 @@ struct ArkheionMapView: View {
         return CGPoint(x: location.x + origin.x, y: location.y + origin.y)
     }
 
-    /// Maps a raw gesture location to the untransformed canvas coordinate space.
+    /// Maps a raw gesture location from ``TapCaptureView`` back to the
+    /// underlying canvas space. The capture layer is larger than the visible
+    /// canvas and does **not** share the zoom/offset transforms applied to the
+    /// rendered map. The conversion therefore consists of:
+    /// 1. Translating from the enlarged interaction layer to the local geometry
+    ///    space.
+    /// 2. Removing the current pan offset.
+    /// 3. Unscaling by the active zoom around the canvas center.
+    ///
+    ///  ````text
+    ///  Tap Location -> [interactionScale offset] -> View Space -> [offset] ->
+    ///  Panned Space -> [zoom] -> Canvas Space
+    ///  ````
     private func mapToCanvasCoordinates(location: CGPoint, in geo: GeometryProxy) -> CGPoint {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let currentZoom = zoom * gestureZoom
