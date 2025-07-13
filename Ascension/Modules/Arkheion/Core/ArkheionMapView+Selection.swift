@@ -138,8 +138,8 @@ extension ArkheionMapView {
     }
 
     func syncSelectionSets() {
-        selectedRingIndices = selectedRingIndex.map { Set([$0]) } ?? []
-        selectedBranchIDs = selectedBranchID.map { Set([$0]) } ?? []
-        selectedNodeIDs = selectedNodeID.map { Set([$0]) } ?? []
+        selectedRingIndices = selectedRingIndex.map { Set([$0]) } ?? Set<Int>()
+        selectedBranchIDs = selectedBranchID.map { Set([$0]) } ?? Set<UUID>()
+        selectedNodeIDs = selectedNodeID.map { Set([$0]) } ?? Set<UUID>()
     }
 }
