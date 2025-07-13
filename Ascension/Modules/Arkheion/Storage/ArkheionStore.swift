@@ -1,60 +1,32 @@
 import Foundation
 import SwiftUI
 
-/// Manages loading and saving Arkheion map data to a local JSON file.
+/// Manages in-memory Arkheion map data. Persistence has been stripped so the
+/// map always starts in a clean state on launch.
 final class ArkheionStore: ObservableObject {
-    @Published var rings: [Ring] = [] {
-        didSet { save() }
-    }
-    @Published var branches: [Branch] = [] {
-        didSet { save() }
-    }
-
-    private let fileURL: URL
-    private let version = 1
+    @Published var rings: [Ring] = []
+    @Published var branches: [Branch] = []
 
     init() {
-        let manager = FileManager.default
-        let dir = manager.urls(for: .documentDirectory, in: .userDomainMask).first!
-        self.fileURL = dir.appendingPathComponent("ArkheionCache.json")
-        load()
+        // Initialize with the default ring layout every launch
+        self.rings = [
+            Ring(ringIndex: 0, radius: 180, locked: true),
+            Ring(ringIndex: 1, radius: 260, locked: false)
+        ]
+        self.branches = []
     }
 
-    /// Wraps the data stored on disk so we can add versioning later.
-    private struct CacheData: Codable {
-        var version: Int
-        var rings: [Ring]
-        var branches: [Branch]
-    }
+    // MARK: - Persistence Hooks (disabled)
+    // The original implementation saved and loaded JSON files from the
+    // application's Documents directory. That logic has been removed to keep
+    // the canvas ephemeral. Save/load methods are left as stubs for possible
+    // future use.
 
-    /// Loads cache from disk or initializes default data if missing or corrupt.
     func load() {
-        do {
-            let data = try Data(contentsOf: fileURL)
-            let decoded = try JSONDecoder().decode(CacheData.self, from: data)
-            self.rings = decoded.rings
-            self.branches = decoded.branches
-            print("[ArkheionStore] Loaded \(rings.count) rings, \(branches.count) branches from \(fileURL.path)")
-        } catch {
-            // Initialize defaults if loading fails
-            self.rings = [
-                Ring(ringIndex: 0, radius: 180, locked: true),
-                Ring(ringIndex: 1, radius: 260, locked: false)
-            ]
-            self.branches = []
-            save()
-            print("[ArkheionStore] Initialized default data")
-        }
+        // Placeholder: persistence removed
     }
 
-    /// Saves the current rings and branches to disk.
     func save() {
-        let cache = CacheData(version: version, rings: rings, branches: branches)
-        do {
-            let data = try JSONEncoder().encode(cache)
-            try data.write(to: fileURL, options: [.atomic])
-        } catch {
-            print("ArkheionStore save error: \(error)")
-        }
+        // Placeholder: persistence removed
     }
 }
