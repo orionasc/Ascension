@@ -30,6 +30,9 @@ struct ArkheionMapView: View {
     @State private var hoverRingIndex: Int? = nil
     @State private var hoverAngle: Double = 0.0
 
+    // Custom cursor tracking
+    @State private var cursorLocation: CGPoint? = nil
+
     /// Scale factor used to expand the invisible hit area around the map.
     private let interactionScale: CGFloat = 4
 
@@ -151,6 +154,9 @@ struct ArkheionMapView: View {
                     moveNodeDown: moveSelectedNodeDown
                 )
                 .padding(.trailing, 8)
+            }
+            .overlay(alignment: .topLeading) {
+                CursorOverlay(location: $cursorLocation)
             }
         }
     }
