@@ -23,15 +23,15 @@ struct ArkheionMapView: View {
     @State var selectedNodeIDs: Set<UUID> = []
 
     // Drag selection rectangle
-    @State var marqueeStart: CGPoint? = nil
-    @State var marqueeCurrent: CGPoint? = nil
+    @State internal var marqueeStart: CGPoint? = nil
+    @State internal var marqueeCurrent: CGPoint? = nil
 
     // MARK: - Gestures
-    @State var lastDragLocation: CGPoint? = nil
-    @State var zoom: CGFloat = 1.0
-    @State var offset: CGSize = .zero
-    @GestureState var gestureZoom: CGFloat = 1.0
-    @GestureState var dragTranslation: CGSize = .zero
+    @State internal var lastDragLocation: CGPoint? = nil
+    @State internal var zoom: CGFloat = 1.0
+    @State internal var offset: CGSize = .zero
+    @GestureState internal var gestureZoom: CGFloat = 1.0
+    @GestureState internal var dragTranslation: CGSize = .zero
 
     // Grid overlay toggle
     @State private var showGrid = true
