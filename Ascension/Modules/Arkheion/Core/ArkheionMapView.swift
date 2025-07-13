@@ -17,6 +17,15 @@ struct ArkheionMapView: View {
     @State private var selectedBranchID: UUID?
     @State private var selectedNodeID: UUID?
 
+    // Multi-selection support
+    @State private var selectedRingIndices: Set<Int> = []
+    @State private var selectedBranchIDs: Set<UUID> = []
+    @State private var selectedNodeIDs: Set<UUID> = []
+
+    // Drag selection rectangle
+    @State private var marqueeStart: CGPoint? = nil
+    @State private var marqueeCurrent: CGPoint? = nil
+
     // MARK: - Gestures
     @State private var lastDragLocation: CGPoint? = nil
     @State private var zoom: CGFloat = 1.0
@@ -35,6 +44,16 @@ struct ArkheionMapView: View {
 
     /// Scale factor used to expand the invisible hit area around the map.
     private let interactionScale: CGFloat = 4
+
+    private var marqueeRect: CGRect? {
+        guard let start = marqueeStart, let current = marqueeCurrent else { return nil }
+        return CGRect(
+            x: min(start.x, current.x),
+            y: min(start.y, current.y),
+            width: abs(current.x - start.x),
+            height: abs(current.y - start.y)
+        )
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -59,7 +78,8 @@ struct ArkheionMapView: View {
                             RingView(
                                 ring: ring,
                                 center: center,
-                                highlighted: ring.ringIndex == highlightedRingIndex
+                                highlighted: ring.ringIndex == highlightedRingIndex,
+                                selected: selectedRingIndices.contains(ring.ringIndex)
                             )
                         }
 
@@ -70,7 +90,9 @@ struct ArkheionMapView: View {
                                     center: center,
                                     ringRadius: ring.radius,
                                     selectedBranchID: $selectedBranchID,
-                                    selectedNodeID: $selectedNodeID
+                                    selectedNodeID: $selectedNodeID,
+                                    multiSelected: selectedBranchIDs.contains(branch.id),
+                                    selectedNodeIDs: selectedNodeIDs
                                 ) {
                                     addNode(to: branch.id)
                                 }
@@ -113,6 +135,18 @@ struct ArkheionMapView: View {
                        height: geo.size.height * interactionScale)
                 .position(center)
                 .zIndex(999)
+
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: geo.size.width * interactionScale,
+                           height: geo.size.height * interactionScale)
+                    .position(center)
+                    .contentShape(Rectangle())
+                    .gesture(selectionGesture(in: geo))
+                    .overlay(
+                        Button(action: clearSelection) { Color.clear }
+                            .keyboardShortcut(.escape, modifiers: [])
+                    )
                 
             }
             .gesture(dragGesture.simultaneously(with: zoomGesture))
@@ -158,6 +192,19 @@ struct ArkheionMapView: View {
             .overlay(alignment: .topLeading) {
                 CursorOverlay(location: $cursorLocation)
             }
+            .overlay(alignment: .topLeading) {
+                if let rect = marqueeRect {
+                    Rectangle()
+                        .fill(Color.blue.opacity(0.15))
+                        .overlay(
+                            Rectangle()
+                                .strokeBorder(Color.blue, style: StrokeStyle(lineWidth: 1, dash: [5]))
+                        )
+                        .frame(width: rect.width, height: rect.height)
+                        .position(x: rect.midX, y: rect.midY)
+                        .allowsHitTesting(false)
+                }
+            }
         }
     }
 
@@ -193,6 +240,22 @@ struct ArkheionMapView: View {
             }
             .onEnded { value in
                 zoom *= value
+            }
+    }
+
+    private func selectionGesture(in geo: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if marqueeStart == nil { marqueeStart = value.location }
+                marqueeCurrent = value.location
+            }
+            .onEnded { value in
+                marqueeCurrent = value.location
+                if let start = marqueeStart {
+                    performMarqueeSelection(from: start, to: value.location, in: geo)
+                }
+                marqueeStart = nil
+                marqueeCurrent = nil
             }
     }
 
@@ -327,6 +390,7 @@ struct ArkheionMapView: View {
         selectedNodeID = node.id
         print("[ArkheionMap] Selected branch: \(branch.id)")
         print("[ArkheionMap] Selected node: \(node.id)")
+        syncSelectionSets()
     }
 
     private func toggleLock(for ringIndex: Int) {
@@ -364,6 +428,7 @@ struct ArkheionMapView: View {
         selectedRingIndex = nil
         selectedBranchID = nil
         selectedNodeID = nil
+        syncSelectionSets()
     }
 
     private func addNode(to branchID: UUID) {
@@ -380,6 +445,7 @@ struct ArkheionMapView: View {
         store.branches = updatedBranches
         selectedNodeID = node.id
         print("[ArkheionMap] Added node to branch \(branchID)")
+        syncSelectionSets()
     }
 
     private func unlockAllRings() {
@@ -399,6 +465,7 @@ struct ArkheionMapView: View {
         selectedBranchID = nil
         selectedNodeID = nil
         editingRing = nil
+        syncSelectionSets()
     }
 
     private func createBranch(at angle: Double) {
@@ -411,6 +478,7 @@ struct ArkheionMapView: View {
         store.branches = updatedBranches
         selectedBranchID = branch.id
         selectedNodeID = node.id
+        syncSelectionSets()
     }
 
     private func createBranchFromToolbar() {
@@ -441,6 +509,7 @@ struct ArkheionMapView: View {
         store.branches = updatedBranches
         selectedBranchID = nil
         selectedNodeID = nil
+        syncSelectionSets()
     }
 
     private func deleteSelectedNode() {
@@ -450,6 +519,7 @@ struct ArkheionMapView: View {
         updatedBranches[bIndex].nodes.removeAll { $0.id == nodeID }
         store.branches = updatedBranches
         selectedNodeID = nil
+        syncSelectionSets()
     }
 
     private func moveSelectedNodeUp() {
@@ -479,6 +549,12 @@ struct ArkheionMapView: View {
         return Double(completed) / Double(nodes.count)
     }
 
+    private func syncSelectionSets() {
+        selectedRingIndices = selectedRingIndex.map { Set([$0]) } ?? []
+        selectedBranchIDs = selectedBranchID.map { Set([$0]) } ?? []
+        selectedNodeIDs = selectedNodeID.map { Set([$0]) } ?? []
+    }
+
     // MARK: - Tap Handling
     private func handleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Tap at \(location)")
@@ -487,6 +563,7 @@ struct ArkheionMapView: View {
             selectedNodeID = hit.nodeID
             selectedRingIndex = nil
             print("[ArkheionMap] Selected node: \(hit.nodeID)")
+            syncSelectionSets()
             return
         }
 
@@ -495,6 +572,7 @@ struct ArkheionMapView: View {
             selectedNodeID = nil
             selectedRingIndex = nil
             print("[ArkheionMap] Selected branch: \(branchID)")
+            syncSelectionSets()
             return
         }
 
@@ -504,11 +582,13 @@ struct ArkheionMapView: View {
             selectedBranchID = nil
             selectedNodeID = nil
             print("[ArkheionMap] Selected ring: \(ringIndex)")
+            syncSelectionSets()
             return
         } else {
             selectedRingIndex = nil
             selectedBranchID = nil
             selectedNodeID = nil
+            syncSelectionSets()
         }
     }
 
@@ -517,6 +597,7 @@ struct ArkheionMapView: View {
         guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
         selectedRingIndex = ringIndex
+        syncSelectionSets()
 
         // Calculate the angle of the tap relative to the map center
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -632,6 +713,69 @@ struct ArkheionMapView: View {
         t = max(0, min(1, t))
         let proj = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
         return hypot(point.x - proj.x, point.y - proj.y)
+    }
+
+    private func performMarqueeSelection(from start: CGPoint, to end: CGPoint, in geo: GeometryProxy) {
+        let p1 = mapToCanvasCoordinates(location: start, in: geo)
+        let p2 = mapToCanvasCoordinates(location: end, in: geo)
+        let rect = CGRect(
+            x: min(p1.x, p2.x),
+            y: min(p1.y, p2.y),
+            width: abs(p2.x - p1.x),
+            height: abs(p2.y - p1.y)
+        )
+
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+
+        var ringSet: Set<Int> = []
+        var branchSet: Set<UUID> = []
+        var nodeSet: Set<UUID> = []
+
+        for ring in store.rings {
+            if rect.contains(center) {
+                ringSet.insert(ring.ringIndex)
+            }
+        }
+
+        for branch in store.branches {
+            guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
+            let length = CGFloat(branch.nodes.count) * 60
+            let dist = ring.radius + length / 2
+            let bCenter = CGPoint(
+                x: center.x + CGFloat(Darwin.cos(branch.angle)) * dist,
+                y: center.y + CGFloat(Darwin.sin(branch.angle)) * dist
+            )
+            if rect.contains(bCenter) {
+                branchSet.insert(branch.id)
+            }
+            for (idx, node) in branch.nodes.enumerated() {
+                let d = ring.radius + CGFloat(idx + 1) * 60
+                let nPos = CGPoint(
+                    x: center.x + CGFloat(Darwin.cos(branch.angle)) * d,
+                    y: center.y + CGFloat(Darwin.sin(branch.angle)) * d
+                )
+                if rect.contains(nPos) {
+                    nodeSet.insert(node.id)
+                }
+            }
+        }
+
+        selectedRingIndices = ringSet
+        selectedBranchIDs = branchSet
+        selectedNodeIDs = nodeSet
+
+        selectedRingIndex = ringSet.first
+        selectedBranchID = branchSet.first
+        selectedNodeID = nodeSet.first
+    }
+
+    private func clearSelection() {
+        selectedRingIndices.removeAll()
+        selectedBranchIDs.removeAll()
+        selectedNodeIDs.removeAll()
+        selectedRingIndex = nil
+        selectedBranchID = nil
+        selectedNodeID = nil
     }
 }
 

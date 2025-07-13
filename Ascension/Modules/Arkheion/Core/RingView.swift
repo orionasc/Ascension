@@ -16,6 +16,7 @@ struct RingView: View {
     var ring: Ring
     var center: CGPoint
     var highlighted: Bool = false
+    var selected: Bool = false
 
     private var strokeColor: Color {
         ring.locked ? Color.white.opacity(0.2) : Color.white.opacity(0.4)
@@ -32,6 +33,10 @@ struct RingView: View {
             Circle()
                 .stroke(strokeColor, lineWidth: 2)
                 .frame(width: ring.radius * 2, height: ring.radius * 2)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white, lineWidth: selected ? 3 : 0)
+                )
         }
         .padding(20)
         .position(x: center.x, y: center.y)
