@@ -6,21 +6,21 @@ import SwiftUI
 struct ArkheionMapView: View {
 
     /// Data store handling persistence of rings and branches
-    @StateObject private var store = ArkheionStore()
+    @StateObject var store = ArkheionStore()
     /// Holds the ring currently being edited.
     @State private var editingRing: RingEditTarget?
     /// Ring briefly highlighted after a tap
-    @State private var highlightedRingIndex: Int?
+    @State var highlightedRingIndex: Int?
 
     /// Currently selected elements for the editor toolbar
-    @State private var selectedRingIndex: Int?
-    @State private var selectedBranchID: UUID?
-    @State private var selectedNodeID: UUID?
+    @State var selectedRingIndex: Int?
+    @State var selectedBranchID: UUID?
+    @State var selectedNodeID: UUID?
 
     // Multi-selection support
-    @State private var selectedRingIndices: Set<Int> = []
-    @State private var selectedBranchIDs: Set<UUID> = []
-    @State private var selectedNodeIDs: Set<UUID> = []
+    @State var selectedRingIndices: Set<Int> = []
+    @State var selectedBranchIDs: Set<UUID> = []
+    @State var selectedNodeIDs: Set<UUID> = []
 
     // Drag selection rectangle
     @State private var marqueeStart: CGPoint? = nil
