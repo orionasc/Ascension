@@ -2,7 +2,7 @@ import SwiftUI
 
 extension ArkheionMapView {
     // MARK: - Gestures
-    fileprivate var dragGesture: some Gesture {
+    var dragGesture: some Gesture {
         DragGesture()
             .updating($dragTranslation) { value, state, _ in
                 state = value.translation
@@ -13,7 +13,7 @@ extension ArkheionMapView {
             }
     }
 
-    fileprivate var zoomGesture: some Gesture {
+    var zoomGesture: some Gesture {
         MagnificationGesture()
             .updating($gestureZoom) { value, state, _ in
                 state = value
@@ -23,7 +23,7 @@ extension ArkheionMapView {
             }
     }
 
-    fileprivate func selectionGesture(in geo: GeometryProxy) -> some Gesture {
+    func selectionGesture(in geo: GeometryProxy) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if marqueeStart == nil { marqueeStart = value.location }
@@ -40,7 +40,7 @@ extension ArkheionMapView {
     }
 
     /// Expanded gesture capturing taps anywhere within the enlarged interaction layer.
-    fileprivate func interactionGesture(in geo: GeometryProxy) -> some Gesture {
+    private func interactionGesture(in geo: GeometryProxy) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 let location = value.location
@@ -54,7 +54,7 @@ extension ArkheionMapView {
             }
     }
 
-    fileprivate func doubleTapGesture(in geo: GeometryProxy) -> some Gesture {
+    private func doubleTapGesture(in geo: GeometryProxy) -> some Gesture {
         TapGesture(count: 2)
             .onEnded {
                 let location = lastDragLocation ?? .zero

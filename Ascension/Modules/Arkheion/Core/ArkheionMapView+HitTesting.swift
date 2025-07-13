@@ -2,7 +2,7 @@ import SwiftUI
 
 extension ArkheionMapView {
     // MARK: - Coordinate Mapping
-    fileprivate func convert(location: CGPoint, in geo: GeometryProxy) -> CGPoint {
+    private func convert(location: CGPoint, in geo: GeometryProxy) -> CGPoint {
         let size = CGSize(width: geo.size.width * interactionScale,
                           height: geo.size.height * interactionScale)
         let origin = CGPoint(x: geo.size.width / 2 - size.width / 2,
@@ -12,7 +12,7 @@ extension ArkheionMapView {
 
     /// Maps a raw gesture location from ``TapCaptureView`` back to the
     /// underlying canvas space.
-    fileprivate func mapToCanvasCoordinates(location: CGPoint, in geo: GeometryProxy) -> CGPoint {
+    func mapToCanvasCoordinates(location: CGPoint, in geo: GeometryProxy) -> CGPoint {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let currentZoom = zoom * gestureZoom
 
@@ -34,7 +34,7 @@ extension ArkheionMapView {
         return point
     }
 
-    fileprivate func nearestRing(at location: CGPoint, in geo: GeometryProxy) -> Int? {
+    func nearestRing(at location: CGPoint, in geo: GeometryProxy) -> Int? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
         let distance = hypot(point.x - center.x, point.y - center.y)
@@ -42,7 +42,7 @@ extension ArkheionMapView {
     }
 
     /// Returns the ring index and angle if the location hovers a ring edge
-    fileprivate func ringHit(at location: CGPoint, in geo: GeometryProxy) -> (Int, Double)? {
+    func ringHit(at location: CGPoint, in geo: GeometryProxy) -> (Int, Double)? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
         let distance = hypot(point.x - center.x, point.y - center.y)
@@ -56,7 +56,7 @@ extension ArkheionMapView {
         return nil
     }
 
-    fileprivate func updateHover(at location: CGPoint, in geo: GeometryProxy) {
+    func updateHover(at location: CGPoint, in geo: GeometryProxy) {
         if let (index, angle) = ringHit(at: location, in: geo) {
             hoverRingIndex = index
             hoverAngle = angle
@@ -65,7 +65,7 @@ extension ArkheionMapView {
         }
     }
 
-    fileprivate func hitNode(at location: CGPoint, in geo: GeometryProxy) -> (branchID: UUID, nodeID: UUID)? {
+    func hitNode(at location: CGPoint, in geo: GeometryProxy) -> (branchID: UUID, nodeID: UUID)? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
 
@@ -87,7 +87,7 @@ extension ArkheionMapView {
         return nil
     }
 
-    fileprivate func hitBranch(at location: CGPoint, in geo: GeometryProxy) -> UUID? {
+    func hitBranch(at location: CGPoint, in geo: GeometryProxy) -> UUID? {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
 
@@ -110,7 +110,7 @@ extension ArkheionMapView {
         return nil
     }
 
-    fileprivate func distance(from point: CGPoint, toSegment start: CGPoint, end: CGPoint) -> CGFloat {
+    private func distance(from point: CGPoint, toSegment start: CGPoint, end: CGPoint) -> CGFloat {
         let dx = end.x - start.x
         let dy = end.y - start.y
         let lengthSquared = dx * dx + dy * dy

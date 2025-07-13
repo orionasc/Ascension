@@ -2,7 +2,7 @@ import SwiftUI
 
 extension ArkheionMapView {
     // MARK: - Tap Handling
-    fileprivate func handleTap(at location: CGPoint, in geo: GeometryProxy) {
+    func handleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Tap at \(location)")
         if let hit = hitNode(at: location, in: geo) {
             selectedBranchID = hit.branchID
@@ -38,7 +38,7 @@ extension ArkheionMapView {
         }
     }
 
-    fileprivate func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
+    func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Double tap at \(location)")
         guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
@@ -54,14 +54,14 @@ extension ArkheionMapView {
         createBranch(at: Double(angle))
     }
 
-    fileprivate func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
+    func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Long press at \(location)")
         guard let index = nearestRing(at: location, in: geo) else { return }
         toggleLock(for: index)
         highlight(ringIndex: index)
     }
 
-    fileprivate func highlight(ringIndex: Int) {
+    func highlight(ringIndex: Int) {
 #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
 #endif
@@ -74,7 +74,7 @@ extension ArkheionMapView {
         }
     }
 
-    fileprivate func performMarqueeSelection(from start: CGPoint, to end: CGPoint, in geo: GeometryProxy) {
+    func performMarqueeSelection(from start: CGPoint, to end: CGPoint, in geo: GeometryProxy) {
         let p1 = mapToCanvasCoordinates(location: start, in: geo)
         let p2 = mapToCanvasCoordinates(location: end, in: geo)
         let rect = CGRect(
@@ -128,7 +128,7 @@ extension ArkheionMapView {
         selectedNodeID = nodeSet.first
     }
 
-    fileprivate func clearSelection() {
+    func clearSelection() {
         selectedRingIndices.removeAll()
         selectedBranchIDs.removeAll()
         selectedNodeIDs.removeAll()
@@ -137,7 +137,7 @@ extension ArkheionMapView {
         selectedNodeID = nil
     }
 
-    fileprivate func syncSelectionSets() {
+    func syncSelectionSets() {
         selectedRingIndices = selectedRingIndex.map { Set([$0]) } ?? []
         selectedBranchIDs = selectedBranchID.map { Set([$0]) } ?? []
         selectedNodeIDs = selectedNodeID.map { Set([$0]) } ?? []
