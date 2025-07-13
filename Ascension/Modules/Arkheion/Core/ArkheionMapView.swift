@@ -121,8 +121,7 @@ struct ArkheionMapView: View {
             .onHover { hovering in
                 if !hovering { hoverRingIndex = nil }
             }
-            .overlay(gridToggleButton, alignment: .topTrailing)
-            .overlay(addRingButton, alignment: .bottomTrailing)
+            .overlay(controlButtons, alignment: .bottomTrailing)
             .overlay(alignment: .top) {
                 if let target = editingRing,
                    let binding = bindingForRing(target.ringIndex) {
@@ -285,6 +284,24 @@ struct ArkheionMapView: View {
         .padding()
     }
 
+    private var resetButton: some View {
+        Button("Reset", action: resetCanvas)
+            .font(.title2)
+            .padding(8)
+            .background(Color.black.opacity(0.4))
+            .clipShape(Capsule())
+            .buttonStyle(.plain)
+            .padding()
+    }
+
+    private var controlButtons: some View {
+        HStack {
+            gridToggleButton
+            addRingButton
+            resetButton
+        }
+    }
+
     // MARK: - Interaction
 
     private func onRingTapped(ringIndex: Int, angle: Double) {
@@ -365,6 +382,17 @@ struct ArkheionMapView: View {
             updatedRings[index].locked = false
         }
         store.rings = updatedRings
+    }
+
+    private func resetCanvas() {
+        store.branches.removeAll()
+        store.rings.removeAll()
+        store.rings.append(Ring(ringIndex: 0, radius: 100, locked: true))
+        store.rings.append(Ring(ringIndex: 1, radius: 180, locked: true))
+        selectedRingIndex = nil
+        selectedBranchID = nil
+        selectedNodeID = nil
+        editingRing = nil
     }
 
     private func createBranch(at angle: Double) {
