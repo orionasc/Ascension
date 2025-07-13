@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// Main view presenting the Arkheion map. This rewrite focuses on the base
 /// space layer while keeping compatibility with existing data models. Future
@@ -29,6 +32,11 @@ struct ArkheionMapView: View {
     // Hover indicator
     @State private var hoverRingIndex: Int? = nil
     @State private var hoverAngle: Double = 0.0
+
+#if os(macOS)
+    @State private var cursorPoint: CGPoint = .zero
+    @State private var cursorHovering = false
+#endif
 
     /// Scale factor used to expand the invisible hit area around the map.
     private let interactionScale: CGFloat = 4
@@ -121,6 +129,18 @@ struct ArkheionMapView: View {
             .onHover { hovering in
                 if !hovering { hoverRingIndex = nil }
             }
+#if os(macOS)
+            .onChange(of: cursorHovering) { inside in
+                if inside {
+                    NSCursor.hide()
+                } else {
+                    NSCursor.unhide()
+                }
+            }
+            .onDisappear {
+                NSCursor.unhide()
+            }
+#endif
             .overlay(gridToggleButton, alignment: .topTrailing)
             .overlay(addRingButton, alignment: .bottomTrailing)
             .overlay(alignment: .top) {
@@ -153,6 +173,16 @@ struct ArkheionMapView: View {
                 )
                 .padding(.trailing, 8)
             }
+#if os(macOS)
+            .overlay(
+                CursorTrackerView(location: $cursorPoint, hovering: $cursorHovering)
+                    .allowsHitTesting(false)
+            )
+            .overlay(
+                CustomCursorView(location: cursorPoint, visible: cursorHovering)
+                    .allowsHitTesting(false)
+            )
+#endif
         }
     }
 
