@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// Main view presenting the Arkheion map. This rewrite focuses on the base
 /// space layer while keeping compatibility with existing data models. Future
@@ -25,6 +28,7 @@ struct ArkheionMapView: View {
     // Drag selection rectangle
     @State internal var marqueeStart: CGPoint? = nil
     @State internal var marqueeCurrent: CGPoint? = nil
+    @State private var isDraggingSelection = false
 
     // MARK: - Gestures
     @State internal var lastDragLocation: CGPoint? = nil
@@ -46,7 +50,9 @@ struct ArkheionMapView: View {
     private let interactionScale: CGFloat = 4
 
     private var marqueeRect: CGRect? {
-        guard let start = marqueeStart, let current = marqueeCurrent else { return nil }
+        guard isDraggingSelection,
+              let start = marqueeStart,
+              let current = marqueeCurrent else { return nil }
         return CGRect(
             x: min(start.x, current.x),
             y: min(start.y, current.y),
@@ -193,16 +199,10 @@ struct ArkheionMapView: View {
                 CursorOverlay(location: $cursorLocation)
             }
             .overlay(alignment: .topLeading) {
-                if let rect = marqueeRect {
-                    Rectangle()
-                        .fill(Color.blue.opacity(0.15))
-                        .overlay(
-                            Rectangle()
-                                .strokeBorder(Color.blue, style: StrokeStyle(lineWidth: 1, dash: [5]))
-                        )
-                        .frame(width: rect.width, height: rect.height)
-                        .position(x: rect.midX, y: rect.midY)
-                        .allowsHitTesting(false)
+                if isDraggingSelection,
+                   let start = marqueeStart,
+                   let current = marqueeCurrent {
+                    SelectionMarqueeView(start: start, current: current)
                 }
             }
         }
@@ -212,9 +212,21 @@ struct ArkheionMapView: View {
     var dragGesture: some Gesture {
         DragGesture()
             .updating($dragTranslation) { value, state, _ in
+#if os(macOS)
+                let touches = NSApp.currentEvent?.touches(matching: .touching, in: nil).count ?? 0
+                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                guard touches > 1 || modifiers.contains(.option) || modifiers.contains(.command) else { return }
+#endif
+                guard !isDraggingSelection else { return }
                 state = value.translation
             }
             .onEnded { value in
+#if os(macOS)
+                let touches = NSApp.currentEvent?.touches(matching: .touching, in: nil).count ?? 0
+                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+                guard touches > 1 || modifiers.contains(.option) || modifiers.contains(.command) else { return }
+#endif
+                guard !isDraggingSelection else { return }
                 offset.width += value.translation.width
                 offset.height += value.translation.height
             }
@@ -233,16 +245,28 @@ struct ArkheionMapView: View {
     func selectionGesture(in geo: GeometryProxy) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+#if os(macOS)
+                if let event = NSApp.currentEvent,
+                   event.touches(matching: .touching, in: nil).count > 1 {
+                    // Ignore multi-touch, reserved for panning
+                    isDraggingSelection = false
+                    return
+                }
+#endif
                 if marqueeStart == nil { marqueeStart = value.location }
                 marqueeCurrent = value.location
+                isDraggingSelection = true
             }
             .onEnded { value in
-                marqueeCurrent = value.location
-                if let start = marqueeStart {
-                    performMarqueeSelection(from: start, to: value.location, in: geo)
+                if isDraggingSelection {
+                    marqueeCurrent = value.location
+                    if let start = marqueeStart {
+                        performMarqueeSelection(from: start, to: value.location, in: geo)
+                    }
                 }
                 marqueeStart = nil
                 marqueeCurrent = nil
+                isDraggingSelection = false
             }
     }
 
