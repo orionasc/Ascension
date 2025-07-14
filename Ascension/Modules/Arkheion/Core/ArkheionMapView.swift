@@ -26,8 +26,8 @@ struct ArkheionMapView: View {
     @State var selectedNodeIDs: Set<UUID> = []
 
     // Drag selection rectangle
-    @State internal var marqueeStart: CGPoint? = nil
-    @State internal var marqueeCurrent: CGPoint? = nil
+    @State private var dragStartPoint: CGPoint? = nil
+    @State private var dragCurrentPoint: CGPoint? = nil
     @State private var isDraggingSelection = false
 
     // MARK: - Gestures
@@ -51,8 +51,8 @@ struct ArkheionMapView: View {
 
     private var marqueeRect: CGRect? {
         guard isDraggingSelection,
-              let start = marqueeStart,
-              let current = marqueeCurrent else { return nil }
+              let start = dragStartPoint,
+              let current = dragCurrentPoint else { return nil }
         return CGRect(
             x: min(start.x, current.x),
             y: min(start.y, current.y),
@@ -148,14 +148,14 @@ struct ArkheionMapView: View {
                            height: geo.size.height * interactionScale)
                     .position(center)
                     .contentShape(Rectangle())
-                    .gesture(selectionGesture(in: geo))
                     .overlay(
                         Button(action: clearSelection) { Color.clear }
                             .keyboardShortcut(.escape, modifiers: [])
                     )
                 
             }
-            .gesture(dragGesture.simultaneously(with: zoomGesture))
+            .gesture(marqueeGesture(in: geo))
+            .simultaneousGesture(panGesture.simultaneously(with: zoomGesture))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .onAppear {
@@ -200,8 +200,8 @@ struct ArkheionMapView: View {
             }
             .overlay(alignment: .topLeading) {
                 if isDraggingSelection,
-                   let start = marqueeStart,
-                   let current = marqueeCurrent {
+                   let start = dragStartPoint,
+                   let current = dragCurrentPoint {
                     SelectionMarqueeView(start: start, current: current)
                 }
             }
@@ -209,7 +209,7 @@ struct ArkheionMapView: View {
     }
 
     // MARK: - Gestures
-    var dragGesture: some Gesture {
+    var panGesture: some Gesture {
         DragGesture()
             .updating($dragTranslation) { value, state, _ in
 #if os(macOS)
@@ -242,30 +242,24 @@ struct ArkheionMapView: View {
             }
     }
 
-    func selectionGesture(in geo: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 0)
+    func marqueeGesture(in geo: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 5)
             .onChanged { value in
 #if os(macOS)
-                if let event = NSApp.currentEvent,
-                   event.touches(matching: .touching, in: nil).count > 1 {
-                    // Ignore multi-touch, reserved for panning
-                    isDraggingSelection = false
-                    return
-                }
+                guard NSEvent.pressedMouseButtons == 1 else { return }
 #endif
-                if marqueeStart == nil { marqueeStart = value.location }
-                marqueeCurrent = value.location
+                if dragStartPoint == nil {
+                    dragStartPoint = value.startLocation
+                }
+                dragCurrentPoint = value.location
                 isDraggingSelection = true
             }
             .onEnded { value in
-                if isDraggingSelection {
-                    marqueeCurrent = value.location
-                    if let start = marqueeStart {
-                        performMarqueeSelection(from: start, to: value.location, in: geo)
-                    }
+                if let start = dragStartPoint, let current = dragCurrentPoint {
+                    performMarqueeSelection(from: start, to: current, in: geo)
                 }
-                marqueeStart = nil
-                marqueeCurrent = nil
+                dragStartPoint = nil
+                dragCurrentPoint = nil
                 isDraggingSelection = false
             }
     }
