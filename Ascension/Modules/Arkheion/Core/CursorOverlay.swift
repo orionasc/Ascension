@@ -71,6 +71,9 @@ private struct MouseTrackingView: NSViewRepresentable {
         var onMove: ((CGPoint) -> Void)?
         var onHoverChanged: ((Bool) -> Void)?
 
+        /// Use a flipped coordinate system so Y increases downward like SwiftUI.
+        override var isFlipped: Bool { true }
+
         override func updateTrackingAreas() {
             super.updateTrackingAreas()
             for area in trackingAreas { removeTrackingArea(area) }
