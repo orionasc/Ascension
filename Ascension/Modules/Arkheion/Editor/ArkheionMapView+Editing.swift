@@ -6,19 +6,14 @@ extension ArkheionMapView {
         print("[ArkheionMap] Ring tapped: index=\(ringIndex) angle=\(angle)")
         selectedRingIndex = ringIndex
         selectedBranchID = nil
-        selectedNodeID = nil
         print("[ArkheionMap] Selected ring: \(ringIndex)")
         guard let ring = store.rings.first(where: { $0.ringIndex == ringIndex }), !ring.locked else { return }
         var branch = Branch(ringIndex: ringIndex, angle: angle)
-        let node = Node()
-        branch.nodes.insert(node, at: 0)
         var updatedBranches = store.branches
         updatedBranches.append(branch)
         store.branches = updatedBranches
         selectedBranchID = branch.id
-        selectedNodeID = node.id
         print("[ArkheionMap] Selected branch: \(branch.id)")
-        print("[ArkheionMap] Selected node: \(node.id)")
     }
 
     func toggleLock(for ringIndex: Int) {
@@ -55,23 +50,6 @@ extension ArkheionMapView {
         if editingRing?.ringIndex == ringIndex { editingRing = nil }
         selectedRingIndex = nil
         selectedBranchID = nil
-        selectedNodeID = nil
-    }
-
-    func addNode(to branchID: UUID) {
-        let branchIDs = store.branches.map { $0.id }
-        print("[ArkheionMap] addNode -> selectedBranchID=\(String(describing: selectedBranchID))")
-        print("[ArkheionMap] Current branches: \(branchIDs)")
-        guard let index = store.branches.firstIndex(where: { $0.id == branchID }) else {
-            print("[ArkheionMap] addNode aborted: branch \(branchID) not found")
-            return
-        }
-        let node = Node()
-        var updatedBranches = store.branches
-        updatedBranches[index].nodes.insert(node, at: 0)
-        store.branches = updatedBranches
-        selectedNodeID = node.id
-        print("[ArkheionMap] Added node to branch \(branchID)")
     }
 
     func unlockAllRings() {
@@ -89,20 +67,16 @@ extension ArkheionMapView {
         store.rings.append(Ring(ringIndex: 1, radius: 180, locked: true))
         selectedRingIndex = nil
         selectedBranchID = nil
-        selectedNodeID = nil
         editingRing = nil
     }
 
     func createBranch(at angle: Double) {
         guard let ringIndex = selectedRingIndex else { return }
         var branch = Branch(ringIndex: ringIndex, angle: angle)
-        let node = Node()
-        branch.nodes.insert(node, at: 0)
         var updatedBranches = store.branches
         updatedBranches.append(branch)
         store.branches = updatedBranches
         selectedBranchID = branch.id
-        selectedNodeID = node.id
     }
 
     func createBranchFromToolbar() {
@@ -113,61 +87,11 @@ extension ArkheionMapView {
         createBranch(at: 0.0)
     }
 
-    func addNodeFromToolbar() {
-        guard let branchID = selectedBranchID else {
-            print("[ArkheionMap] addNodeFromToolbar called with no branch selected")
-            return
-        }
-        guard store.branches.contains(where: { $0.id == branchID }) else {
-            print("[ArkheionMap] addNodeFromToolbar aborted: selected branch \(branchID) missing")
-            selectedBranchID = nil
-            return
-        }
-        addNode(to: branchID)
-    }
-
     func deleteSelectedBranch() {
         guard let id = selectedBranchID else { return }
         var updatedBranches = store.branches
         updatedBranches.removeAll { $0.id == id }
         store.branches = updatedBranches
         selectedBranchID = nil
-        selectedNodeID = nil
-    }
-
-    func deleteSelectedNode() {
-        guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
-        guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
-        var updatedBranches = store.branches
-        updatedBranches[bIndex].nodes.removeAll { $0.id == nodeID }
-        store.branches = updatedBranches
-        selectedNodeID = nil
-    }
-
-    func moveSelectedNodeUp() {
-        guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
-        guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
-        guard let nIndex = store.branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex > 0 else { return }
-        var updatedBranches = store.branches
-        updatedBranches[bIndex].nodes.swapAt(nIndex, nIndex - 1)
-        store.branches = updatedBranches
-    }
-
-    func moveSelectedNodeDown() {
-        guard let branchID = selectedBranchID, let nodeID = selectedNodeID else { return }
-        guard let bIndex = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
-        guard let nIndex = store.branches[bIndex].nodes.firstIndex(where: { $0.id == nodeID }), nIndex < store.branches[bIndex].nodes.count - 1 else { return }
-        var updatedBranches = store.branches
-        updatedBranches[bIndex].nodes.swapAt(nIndex, nIndex + 1)
-        store.branches = updatedBranches
-    }
-
-    /// Calculates completion progress for a ring based on nodes finished.
-    func progress(for ringIndex: Int) -> Double {
-        let ringBranches = store.branches.filter { $0.ringIndex == ringIndex }
-        let nodes = ringBranches.flatMap { $0.nodes }
-        guard !nodes.isEmpty else { return 0 }
-        let completed = nodes.filter { $0.completed }.count
-        return Double(completed) / Double(nodes.count)
     }
 }
