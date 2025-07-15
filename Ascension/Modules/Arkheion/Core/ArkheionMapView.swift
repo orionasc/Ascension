@@ -118,9 +118,6 @@ struct ArkheionMapView: View {
                     geo: geo,
                     rings: store.rings,
                     branches: store.branches,
-                    onSelectNode: { nodeID, branchID in
-                        select(node: nodeID, branch: branchID)
-                    },
                     onSelectBranch: { branchID in
                         select(branch: branchID)
                     },
@@ -232,12 +229,6 @@ struct ArkheionMapView: View {
     // MARK: - Tap Handling
     func handleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Tap at \(location)")
-
-        if let hit = hitNode(at: location, in: geo) {
-            select(node: hit.nodeID, branch: hit.branchID)
-            print("[ArkheionMap] Selected node: \(hit.nodeID)")
-            return
-        }
 
         if let branchID = hitBranch(at: location, in: geo) {
             select(branch: branchID)

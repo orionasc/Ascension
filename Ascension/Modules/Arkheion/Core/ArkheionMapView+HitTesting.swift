@@ -1,7 +1,6 @@
 import SwiftUI
 
 /// Constants controlling hit test tolerance around map elements.
-private let nodeHitTolerance: CGFloat = 30
 private let branchHitTolerance: CGFloat = 20
 private let ringHitTolerance: CGFloat = 25
 
@@ -68,28 +67,6 @@ extension ArkheionMapView {
         } else {
             hoverRingIndex = nil
         }
-    }
-
-    func hitNode(at location: CGPoint, in geo: GeometryProxy) -> (branchID: UUID, nodeID: UUID)? {
-        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let point = mapToCanvasCoordinates(location: location, in: geo)
-
-        for branch in store.branches {
-            guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
-            for (idx, node) in branch.nodes.enumerated() {
-                let distance = ring.radius + CGFloat(idx + 1) * 60
-                let position = CGPoint(
-                    x: center.x + CGFloat(Darwin.cos(branch.angle)) * distance,
-                    y: center.y + CGFloat(Darwin.sin(branch.angle)) * distance
-                )
-                let hitRadius = node.size.radius + NodeView.hitPadding
-                if hypot(point.x - position.x, point.y - position.y) <= hitRadius {
-                    print("[ArkheionMap] hitNode -> branch=\(branch.id) node=\(node.id)")
-                    return (branch.id, node.id)
-                }
-            }
-        }
-        return nil
     }
 
     func hitBranch(at location: CGPoint, in geo: GeometryProxy) -> UUID? {

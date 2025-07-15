@@ -6,7 +6,6 @@ struct ArkheionPrecisionInputLayer: View {
     var geo: GeometryProxy
     var rings: [Ring]
     var branches: [Branch]
-    var onSelectNode: (UUID, UUID) -> Void
     var onSelectBranch: (UUID) -> Void
     var onSelectRing: (Int) -> Void
     var onClearSelection: () -> Void
@@ -18,7 +17,6 @@ struct ArkheionPrecisionInputLayer: View {
     private let tapMovementThreshold: CGFloat = 10
 
     enum SelectionResult {
-        case node(branch: UUID, node: UUID)
         case branch(UUID)
         case ring(Int)
         case none
@@ -61,8 +59,6 @@ struct ArkheionPrecisionInputLayer: View {
     private func handleTap(_ location: CGPoint) {
         let canvasPoint = toCanvasCoords(location)
         switch resolveHit(at: canvasPoint) {
-        case let .node(branch, node):
-            onSelectNode(branch, node)
         case let .branch(id):
             onSelectBranch(id)
         case let .ring(index):
@@ -99,23 +95,7 @@ struct ArkheionPrecisionInputLayer: View {
     private func resolveHit(at point: CGPoint) -> SelectionResult {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
 
-        // 1. Nodes
-        for branch in branches {
-            guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
-            for (i, node) in branch.nodes.enumerated() {
-                let distance = ring.radius + CGFloat(i + 1) * 60
-                let position = CGPoint(
-                    x: center.x + Darwin.cos(branch.angle) * distance,
-                    y: center.y + Darwin.sin(branch.angle) * distance
-                )
-                let hitRadius = max(30, node.size.radius + 12)
-                if hypot(point.x - position.x, point.y - position.y) < hitRadius {
-                    return .node(branch: branch.id, node: node.id)
-                }
-            }
-        }
-
-        // 2. Branches
+        // 1. Branches
         for branch in branches {
             guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             let origin = CGPoint(
@@ -132,7 +112,7 @@ struct ArkheionPrecisionInputLayer: View {
             }
         }
 
-        // 3. Rings
+        // 2. Rings
         let dist = hypot(point.x - center.x, point.y - center.y)
         if let ring = rings.min(by: { abs(dist - $0.radius) < abs(dist - $1.radius) }),
            abs(dist - ring.radius) < 25 {
