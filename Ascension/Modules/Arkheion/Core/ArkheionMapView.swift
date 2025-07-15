@@ -135,21 +135,6 @@ struct ArkheionMapView: View {
                         createBranch(at: angle)
                     }
                 )
-                .frame(width: geo.size.width * interactionScale,
-                       height: geo.size.height * interactionScale)
-                .position(center)
-                .zIndex(999)
-
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: geo.size.width * interactionScale,
-                           height: geo.size.height * interactionScale)
-                    .position(center)
-                    .contentShape(Rectangle())
-                    .overlay(
-                        Button(action: clearSelection) { Color.clear }
-                            .keyboardShortcut(.escape, modifiers: [])
-                    )
                 
             }
             .gesture(panGesture.simultaneously(with: zoomGesture))
@@ -247,6 +232,7 @@ struct ArkheionMapView: View {
     // MARK: - Tap Handling
     func handleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Tap at \(location)")
+
         if let hit = hitNode(at: location, in: geo) {
             select(node: hit.nodeID, branch: hit.branchID)
             print("[ArkheionMap] Selected node: \(hit.nodeID)")
@@ -266,8 +252,10 @@ struct ArkheionMapView: View {
             return
         }
 
+        // Only clear if no hits succeeded
         clearSelection()
     }
+
 
     func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Double tap at \(location)")
@@ -278,7 +266,7 @@ struct ArkheionMapView: View {
         // Calculate the angle of the tap relative to the map center
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
-        let angle = atan2(center.y - point.y, point.x - center.x)
+        let angle = atan2(point.y - center.y, point.x - center.x)
         print("[ArkheionMap] Computed angle \(angle)")
 
         createBranch(at: Double(angle))
@@ -324,14 +312,21 @@ struct ArkheionMapView: View {
     }
 
     func clearSelection() {
+        if selectedRingIndex != nil || selectedBranchID != nil || selectedNodeID != nil {
+            print("[ArkheionMap] Selection cleared.")
+        }
         selectedRingIndex = nil
         selectedBranchID = nil
         selectedNodeID = nil
+        
+        
     }
 
 
 
+
 }
+
 
 
 // MARK: - Preview

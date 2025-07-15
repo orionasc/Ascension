@@ -51,7 +51,7 @@ extension ArkheionMapView {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let point = mapToCanvasCoordinates(location: location, in: geo)
         let distance = hypot(point.x - center.x, point.y - center.y)
-        let angle = atan2(center.y - point.y, point.x - center.x)
+        let angle = atan2(point.y - center.y, point.x - center.x)
         guard let ring = store.rings.min(by: { abs(distance - $0.radius) < abs(distance - $1.radius) }) else { return nil }
         if abs(distance - ring.radius) <= ringHitTolerance {
             print("[ArkheionMap] ringHit -> index=\(ring.ringIndex) angle=\(angle)")
@@ -82,7 +82,7 @@ extension ArkheionMapView {
                     x: center.x + CGFloat(Darwin.cos(branch.angle)) * distance,
                     y: center.y + CGFloat(Darwin.sin(branch.angle)) * distance
                 )
-                let hitRadius = node.size.radius + nodeHitTolerance
+                let hitRadius = node.size.radius + NodeView.hitPadding
                 if hypot(point.x - position.x, point.y - position.y) <= hitRadius {
                     print("[ArkheionMap] hitNode -> branch=\(branch.id) node=\(node.id)")
                     return (branch.id, node.id)
