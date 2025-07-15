@@ -79,7 +79,7 @@ extension ArkheionMapView {
                 x: center.x + CGFloat(Darwin.cos(branch.angle)) * ring.radius,
                 y: center.y + CGFloat(Darwin.sin(branch.angle)) * ring.radius
             )
-            let length = CGFloat(branch.nodes.count) * 60
+            let length: CGFloat = 60
             let end = CGPoint(
                 x: origin.x + CGFloat(Darwin.cos(branch.angle)) * length,
                 y: origin.y + CGFloat(Darwin.sin(branch.angle)) * length
@@ -103,24 +103,4 @@ extension ArkheionMapView {
         return hypot(point.x - proj.x, point.y - proj.y)
     }
 
-    /// Returns true if the canvas point lies within any node's hit radius.
-    func nodeHitCheck(at point: CGPoint, in geo: GeometryProxy) -> Bool {
-        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        for branch in store.branches {
-            guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
-            let direction = CGPoint(x: cos(branch.angle), y: sin(branch.angle))
-            for (i, node) in branch.nodes.enumerated() {
-                let distance = ring.radius + CGFloat(i + 1) * 60
-                let nodePos = CGPoint(
-                    x: center.x + direction.x * distance,
-                    y: center.y + direction.y * distance
-                )
-                let radius = max(node.size.radius, 12) + 10
-                if hypot(point.x - nodePos.x, point.y - nodePos.y) <= radius {
-                    return true
-                }
-            }
-        }
-        return false
-    }
 }

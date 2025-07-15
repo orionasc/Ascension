@@ -10,7 +10,6 @@ struct EditorToolbarView: View {
     /// Currently selected elements
     @Binding var selectedRingIndex: Int?
     @Binding var selectedBranchID: UUID?
-    @Binding var selectedNodeID: UUID?
 
     /// Show/Hide state for the toolbar
     @State private var expanded = true
@@ -20,11 +19,7 @@ struct EditorToolbarView: View {
     var unlockAllRings: () -> Void = {}
     var deleteRing: () -> Void = {}
     var createBranch: () -> Void = {}
-    var addNode: () -> Void = {}
     var deleteBranch: () -> Void = {}
-    var deleteNode: () -> Void = {}
-    var moveNodeUp: () -> Void = {}
-    var moveNodeDown: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 0) {
@@ -54,8 +49,6 @@ struct EditorToolbarView: View {
                 ringControls
                 Divider()
                 branchControls
-                Divider()
-                nodeControls
             }
             .padding()
         }
@@ -110,84 +103,10 @@ struct EditorToolbarView: View {
             .pickerStyle(.menu)
             */
 
-            if let branchBinding = bindingForBranch(selectedBranchID) {
-                VStack(alignment: .leading) {
-                    Text("Themes")
-                    themeGrid(for: branchBinding)
-                }
-            }
+            // Placeholder for future branch-specific controls
         }
     }
 
-    // MARK: - Node Controls
-    private var nodeControls: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Node Controls")
-                .font(.headline)
-            let validBranchSelected = selectedBranchID.flatMap { id in
-                branches.contains(where: { $0.id == id })
-            } ?? false
-            Button(action: addNode) {
-                Label("Add Node", systemImage: "plus")
-            }
-            .disabled(!validBranchSelected)
-            if selectedNodeID != nil {
-                HStack {
-                    Button(action: moveNodeUp) {
-                        Image(systemName: "arrow.up")
-                    }
-                    Button(action: moveNodeDown) {
-                        Image(systemName: "arrow.down")
-                    }
-                }
-                Button(role: .destructive, action: deleteNode) {
-                    Label("Delete Node", systemImage: "trash")
-                }
-            }
-            if let nodeBinding = bindingForNode(selectedNodeID, branchID: selectedBranchID) {
-                Picker("Type", selection: nodeBinding.type) {
-                    ForEach(NodeType.allCases) { type in
-                        Text(type.rawValue.capitalized).tag(type)
-                    }
-                }
-                Picker("Attribute", selection: nodeBinding.attribute) {
-                    ForEach(NodeAttribute.allCases) { attr in
-                        Text(attr.rawValue.capitalized).tag(attr)
-                    }
-                }
-                Picker("Size", selection: nodeBinding.size) {
-                    ForEach(NodeSize.allCases) { size in
-                        Text(size.rawValue.capitalized).tag(size)
-                    }
-                }
-                .pickerStyle(.segmented)
-                TextField("Title", text: nodeBinding.title)
-                TextField("Description", text: nodeBinding.description)
-                Toggle("Completed", isOn: nodeBinding.completed)
-            }
-        }
-    }
-
-    private func themeGrid(for branch: Binding<Branch>) -> some View {
-        let selection = branch.themes
-        return LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 3)) {
-            ForEach(NodeAttribute.allCases) { attr in
-                Button {
-                    toggle(attr, in: branch)
-                } label: {
-                    Circle()
-                        .fill(attr.color)
-                        .overlay(
-                            Image(systemName: selection.wrappedValue.contains(attr) ? "checkmark" : "")
-                                .foregroundColor(.black)
-                        )
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.plain)
-                .disabled(!selection.wrappedValue.contains(attr) && selection.wrappedValue.count >= 3)
-            }
-        }
-    }
 
     // MARK: - Helpers for bindings
     private func bindingForRing(_ index: Int?) -> Binding<Ring>? {
@@ -201,32 +120,12 @@ struct EditorToolbarView: View {
         guard let idx = branches.firstIndex(where: { $0.id == id }) else {
             DispatchQueue.main.async {
                 selectedBranchID = nil
-                selectedNodeID = nil
             }
             return nil
         }
         return $branches[idx]
     }
 
-    private func bindingForNode(_ id: UUID?, branchID: UUID?) -> Binding<Node>? {
-        guard let id, let branchID else { return nil }
-        guard let branchBinding = bindingForBranch(branchID) else { return nil }
-        guard let idx = branchBinding.nodes.wrappedValue.firstIndex(where: { $0.id == id }) else {
-            DispatchQueue.main.async {
-                selectedNodeID = nil
-            }
-            return nil
-        }
-        return branchBinding.nodes[idx]
-    }
-
-    private func toggle(_ attr: NodeAttribute, in branch: Binding<Branch>) {
-        if branch.themes.wrappedValue.contains(attr) {
-            branch.themes.wrappedValue.removeAll { $0 == attr }
-        } else if branch.themes.wrappedValue.count < 3 {
-            branch.themes.wrappedValue.append(attr)
-        }
-    }
 }
 
 #Preview {
@@ -235,7 +134,6 @@ struct EditorToolbarView: View {
         branches: .constant([]),
         selectedRingIndex: .constant(nil),
         selectedBranchID: .constant(nil),
-        selectedNodeID: .constant(nil),
         deleteRing: {}
     )
 }

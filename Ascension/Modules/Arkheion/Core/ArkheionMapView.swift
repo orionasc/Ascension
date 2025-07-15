@@ -18,7 +18,6 @@ struct ArkheionMapView: View {
     /// Currently selected elements for the editor toolbar
     @State var selectedRingIndex: Int?
     @State var selectedBranchID: UUID?
-    @State var selectedNodeID: UUID?
 
 
 
@@ -81,11 +80,8 @@ struct ArkheionMapView: View {
                                     branch: $branch,
                                     center: center,
                                     ringRadius: ring.radius,
-                                    selectedBranchID: $selectedBranchID,
-                                    selectedNodeID: $selectedNodeID
-                                ) {
-                                    addNode(to: branch.id)
-                                }
+                                    selectedBranchID: $selectedBranchID
+                                )
                             }
                         }
 
@@ -133,7 +129,7 @@ struct ArkheionMapView: View {
                    let binding = bindingForRing(target.ringIndex) {
                     FloatingRingEditorView(
                         ring: binding,
-                        progress: progress(for: target.ringIndex),
+                        progress: 0,
                         onBack: { editingRing = nil }
                     )
                     .padding(.top, 20)
@@ -145,16 +141,11 @@ struct ArkheionMapView: View {
                     branches: $store.branches,
                     selectedRingIndex: $selectedRingIndex,
                     selectedBranchID: $selectedBranchID,
-                    selectedNodeID: $selectedNodeID,
                     addRing: addRing,
                     unlockAllRings: unlockAllRings,
                     deleteRing: deleteSelectedRing,
                     createBranch: createBranchFromToolbar,
-                    addNode: addNodeFromToolbar,
-                    deleteBranch: deleteSelectedBranch,
-                    deleteNode: deleteSelectedNode,
-                    moveNodeUp: moveSelectedNodeUp,
-                    moveNodeDown: moveSelectedNodeDown
+                    deleteBranch: deleteSelectedBranch
                 )
                 .padding(.trailing, 8)
             }
@@ -196,18 +187,12 @@ struct ArkheionMapView: View {
                 guard movement < tapMovementThreshold else { return }
 
                 let location = value.location
-                let canvasPoint = mapToCanvasCoordinates(location: location, in: geo)
-                let isNode = nodeHitCheck(at: canvasPoint, in: geo)
 
                 let now = Date()
                 if let last = lastTapTime,
                    now.timeIntervalSince(last) < doubleTapThreshold {
                     lastTapTime = nil
-                    if isNode {
-                        print("[ArkheionMap] Ignoring double tap \u2014 node was hit")
-                    } else {
-                        handleDoubleTap(at: location, in: geo)
-                    }
+                    handleDoubleTap(at: location, in: geo)
                 } else {
                     handleTap(at: location, in: geo)
                     lastTapTime = now
@@ -297,44 +282,24 @@ struct ArkheionMapView: View {
     }
 
     // MARK: - Selection Helpers
-    func select(node: UUID, branch: UUID) {
-        guard store.branches.contains(where: { $0.id == branch }) else {
-            selectedNodeID = nil
-            selectedBranchID = nil
-            return
-        }
-        guard let branchObj = store.branches.first(where: { $0.id == branch }),
-              branchObj.nodes.contains(where: { $0.id == node }) else {
-            selectedNodeID = nil
-            return
-        }
-
-        selectedNodeID = node
-        selectedBranchID = branch
-        selectedRingIndex = nil
-    }
-
     func select(branch: UUID) {
         selectedBranchID = branch
-        selectedNodeID = nil
         selectedRingIndex = nil
     }
 
     func select(ring: Int) {
         selectedRingIndex = ring
         selectedBranchID = nil
-        selectedNodeID = nil
     }
 
     func clearSelection() {
-        if selectedRingIndex != nil || selectedBranchID != nil || selectedNodeID != nil {
+        if selectedRingIndex != nil || selectedBranchID != nil {
             print("[ArkheionMap] Selection cleared.")
         }
 
         DispatchQueue.main.async {
             selectedRingIndex = nil
             selectedBranchID = nil
-            selectedNodeID = nil
         }
     }
 
