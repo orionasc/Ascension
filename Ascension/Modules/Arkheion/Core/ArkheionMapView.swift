@@ -154,25 +154,9 @@ struct ArkheionMapView: View {
                     .padding(.top, 20)
                 }
             }
-            .overlay(alignment: .trailing) {
-                EditorToolbarView(
-                    rings: $store.rings,
-                    branches: $store.branches,
-                    selectedRingIndex: $selectedRingIndex,
-                    selectedBranchID: $selectedBranchID,
-                    selectedNodeID: $selectedNodeID,
-                    addRing: addRing,
-                    unlockAllRings: unlockAllRings,
-                    deleteRing: deleteSelectedRing,
-                    createBranch: createBranchFromToolbar,
-                    addNode: addNodeFromToolbar,
-                    deleteBranch: deleteSelectedBranch,
-                    deleteNode: deleteSelectedNode,
-                    moveNodeUp: moveSelectedNodeUp,
-                    moveNodeDown: moveSelectedNodeDown
-                )
-                .padding(.trailing, 8)
-            }
+            // The editor toolbar previously anchored to the trailing edge has
+            // been removed. It served as a semi translucent overlay for various
+            // editing actions and is no longer part of the design.
             .overlay(alignment: .topLeading) {
                 CursorOverlay(location: $cursorLocation)
             }
