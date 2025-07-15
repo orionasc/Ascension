@@ -26,7 +26,7 @@ struct ArkheionPrecisionInputLayer: View {
         Rectangle()
             .fill(Color.clear)
             .contentShape(Rectangle())
-            .contentShape(Rectangle())
+            .allowsHitTesting(true)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
@@ -39,24 +39,6 @@ struct ArkheionPrecisionInputLayer: View {
                         } else {
                             handleTap(location)
                             lastTapTime = now
-                        }
-                    }
-            )
-
-            .simultaneousGesture(
-                TapGesture(count: 1)
-                    .onEnded { location in
-                        let canvasPoint = toCanvasCoords(location)
-                        switch resolveHit(at: canvasPoint) {
-                        case let .node(branch, node):
-                            onSelectNode(branch, node)
-                        case let .branch(id):
-                            onSelectBranch(id)
-                        case let .ring(index):
-                            onSelectRing(index)
-                        case .none:
-                            print("[InputLayer] Clearing selection — no hit detected")
-                            onClearSelection()
                         }
                     }
             )
