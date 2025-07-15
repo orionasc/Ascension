@@ -25,10 +25,6 @@ struct ArkheionMapView: View {
     @State var selectedBranchIDs: Set<UUID> = []
     @State var selectedNodeIDs: Set<UUID> = []
 
-    // Drag selection rectangle
-    @State private var dragStartPoint: CGPoint? = nil
-    @State private var dragCurrentPoint: CGPoint? = nil
-    @State private var isDraggingSelection = false
 
     // MARK: - Gestures
     @State internal var lastDragLocation: CGPoint? = nil
@@ -49,17 +45,6 @@ struct ArkheionMapView: View {
     /// Scale factor used to expand the invisible hit area around the map.
     private let interactionScale: CGFloat = 4
 
-    private var marqueeRect: CGRect? {
-        guard isDraggingSelection,
-              let start = dragStartPoint,
-              let current = dragCurrentPoint else { return nil }
-        return CGRect(
-            x: min(start.x, current.x),
-            y: min(start.y, current.y),
-            width: abs(current.x - start.x),
-            height: abs(current.y - start.y)
-        )
-    }
 
     var body: some View {
         GeometryReader { geo in
@@ -154,8 +139,7 @@ struct ArkheionMapView: View {
                     )
                 
             }
-            .gesture(marqueeGesture(in: geo))
-            .simultaneousGesture(panGesture.simultaneously(with: zoomGesture))
+            .gesture(panGesture.simultaneously(with: zoomGesture))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .onAppear {
@@ -198,13 +182,6 @@ struct ArkheionMapView: View {
             .overlay(alignment: .topLeading) {
                 CursorOverlay(location: $cursorLocation)
             }
-            .overlay(alignment: .topLeading) {
-                if isDraggingSelection,
-                   let start = dragStartPoint,
-                   let current = dragCurrentPoint {
-                    SelectionMarqueeView(start: start, current: current)
-                }
-            }
         }
     }
 
@@ -212,21 +189,9 @@ struct ArkheionMapView: View {
     var panGesture: some Gesture {
         DragGesture()
             .updating($dragTranslation) { value, state, _ in
-#if os(macOS)
-                let touches = NSApp.currentEvent?.touches(matching: .touching, in: nil).count ?? 0
-                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                guard touches > 1 || modifiers.contains(.option) || modifiers.contains(.command) else { return }
-#endif
-                guard !isDraggingSelection else { return }
                 state = value.translation
             }
             .onEnded { value in
-#if os(macOS)
-                let touches = NSApp.currentEvent?.touches(matching: .touching, in: nil).count ?? 0
-                let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-                guard touches > 1 || modifiers.contains(.option) || modifiers.contains(.command) else { return }
-#endif
-                guard !isDraggingSelection else { return }
                 offset.width += value.translation.width
                 offset.height += value.translation.height
             }
@@ -242,27 +207,6 @@ struct ArkheionMapView: View {
             }
     }
 
-    func marqueeGesture(in geo: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 5)
-            .onChanged { value in
-#if os(macOS)
-                guard NSEvent.pressedMouseButtons == 1 else { return }
-#endif
-                if dragStartPoint == nil {
-                    dragStartPoint = value.startLocation
-                }
-                dragCurrentPoint = value.location
-                isDraggingSelection = true
-            }
-            .onEnded { value in
-                if let start = dragStartPoint, let current = dragCurrentPoint {
-                    performMarqueeSelection(from: start, to: current, in: geo)
-                }
-                dragStartPoint = nil
-                dragCurrentPoint = nil
-                isDraggingSelection = false
-            }
-    }
 
     /// Expanded gesture capturing taps anywhere within the enlarged interaction layer.
     private func interactionGesture(in geo: GeometryProxy) -> some Gesture {
