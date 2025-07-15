@@ -7,8 +7,6 @@ struct BranchView: View {
     var ringRadius: CGFloat
     @Binding var selectedBranchID: UUID?
     @Binding var selectedNodeID: UUID?
-    var multiSelected: Bool = false
-    var selectedNodeIDs: Set<UUID> = []
     var onAddNode: () -> Void = {}
 
     /// When hovering the base of the branch we show the dashed add control
@@ -51,8 +49,8 @@ struct BranchView: View {
         ZStack {
             branchPath
                 .stroke(
-                    (selectedBranchID == branch.id || multiSelected) ? Color.white : Color.white.opacity(0.5),
-                    lineWidth: (selectedBranchID == branch.id || multiSelected) ? 4 : 2
+                    selectedBranchID == branch.id ? Color.white : Color.white.opacity(0.5),
+                    lineWidth: selectedBranchID == branch.id ? 4 : 2
                 )
                 .contentShape(branchPath.strokedPath(StrokeStyle(lineWidth: 20)))
                 .zIndex(2)
@@ -66,7 +64,7 @@ struct BranchView: View {
 
                 NodeView(
                     node: node,
-                    selected: selectedNodeID == node.id || selectedNodeIDs.contains(node.id)
+                    selected: selectedNodeID == node.id
                 )
                     .position(position)
             }
@@ -96,8 +94,6 @@ struct BranchView: View {
         center: CGPoint(x: 150, y: 150),
         ringRadius: 100,
         selectedBranchID: .constant(nil),
-        selectedNodeID: .constant(nil),
-        multiSelected: false,
-        selectedNodeIDs: []
+        selectedNodeID: .constant(nil)
     )
 }

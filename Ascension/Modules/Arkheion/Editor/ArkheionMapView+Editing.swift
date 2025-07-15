@@ -19,7 +19,6 @@ extension ArkheionMapView {
         selectedNodeID = node.id
         print("[ArkheionMap] Selected branch: \(branch.id)")
         print("[ArkheionMap] Selected node: \(node.id)")
-        syncSelectionSets()
     }
 
     func toggleLock(for ringIndex: Int) {
@@ -57,7 +56,6 @@ extension ArkheionMapView {
         selectedRingIndex = nil
         selectedBranchID = nil
         selectedNodeID = nil
-        syncSelectionSets()
     }
 
     func addNode(to branchID: UUID) {
@@ -74,7 +72,6 @@ extension ArkheionMapView {
         store.branches = updatedBranches
         selectedNodeID = node.id
         print("[ArkheionMap] Added node to branch \(branchID)")
-        syncSelectionSets()
     }
 
     func unlockAllRings() {
@@ -94,7 +91,6 @@ extension ArkheionMapView {
         selectedBranchID = nil
         selectedNodeID = nil
         editingRing = nil
-        syncSelectionSets()
     }
 
     func createBranch(at angle: Double) {
@@ -107,7 +103,6 @@ extension ArkheionMapView {
         store.branches = updatedBranches
         selectedBranchID = branch.id
         selectedNodeID = node.id
-        syncSelectionSets()
     }
 
     func createBranchFromToolbar() {
@@ -138,7 +133,6 @@ extension ArkheionMapView {
         store.branches = updatedBranches
         selectedBranchID = nil
         selectedNodeID = nil
-        syncSelectionSets()
     }
 
     func deleteSelectedNode() {
@@ -148,7 +142,6 @@ extension ArkheionMapView {
         updatedBranches[bIndex].nodes.removeAll { $0.id == nodeID }
         store.branches = updatedBranches
         selectedNodeID = nil
-        syncSelectionSets()
     }
 
     func moveSelectedNodeUp() {
