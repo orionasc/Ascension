@@ -111,10 +111,29 @@ struct ArkheionMapView: View {
                 // beyond the visible frame.
                 interactionLayer(center: center, geo: geo)
 
-                TapCaptureView(
-                    onTap: { handleTap(at: $0, in: geo) },
-                    onDoubleTap: { handleDoubleTap(at: $0, in: geo) },
-                    onLongPress: { handleLongPress(at: $0, in: geo) }
+                ArkheionPrecisionInputLayer(
+                    zoom: currentZoom,
+                    offset: CGSize(width: offset.width + dragTranslation.width,
+                                   height: offset.height + dragTranslation.height),
+                    geo: geo,
+                    rings: store.rings,
+                    branches: store.branches,
+                    onSelectNode: { nodeID, branchID in
+                        select(node: nodeID, branch: branchID)
+                    },
+                    onSelectBranch: { branchID in
+                        select(branch: branchID)
+                    },
+                    onSelectRing: { index in
+                        highlight(ringIndex: index)
+                        select(ring: index)
+                    },
+                    onClearSelection: clearSelection,
+                    onCreateBranch: { angle, ringIndex in
+                        highlight(ringIndex: ringIndex)
+                        selectedRingIndex = ringIndex
+                        createBranch(at: angle)
+                    }
                 )
                 .frame(width: geo.size.width * interactionScale,
                        height: geo.size.height * interactionScale)
