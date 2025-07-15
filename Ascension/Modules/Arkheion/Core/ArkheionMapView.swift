@@ -11,7 +11,7 @@ struct ArkheionMapView: View {
     /// Data store handling persistence of rings and branches
     @StateObject var store = ArkheionStore()
     /// Holds the ring currently being edited.
-    @State private var editingRing: RingEditTarget?
+    @State var editingRing: RingEditTarget?
     /// Ring briefly highlighted after a tap
     @State var highlightedRingIndex: Int?
 
@@ -34,16 +34,16 @@ struct ArkheionMapView: View {
     @GestureState internal var dragTranslation: CGSize = .zero
 
     // Grid overlay toggle
-    @State private var showGrid = true
+    @State var showGrid = true
     // Hover indicator
-    @State private var hoverRingIndex: Int? = nil
-    @State private var hoverAngle: Double = 0.0
+    @State var hoverRingIndex: Int? = nil
+    @State var hoverAngle: Double = 0.0
 
     // Custom cursor tracking
     @State private var cursorLocation: CGPoint? = nil
 
     /// Scale factor used to expand the invisible hit area around the map.
-    private let interactionScale: CGFloat = 4
+    let interactionScale: CGFloat = 4
 
 
     var body: some View {
