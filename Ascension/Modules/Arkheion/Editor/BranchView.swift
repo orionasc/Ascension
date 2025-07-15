@@ -64,7 +64,10 @@ struct BranchView: View {
 
                 NodeView(
                     node: node,
-                    selected: selectedNodeID == node.id
+                    branchID: branch.id,
+                    selected: selectedNodeID == node.id,
+                    selectedNodeID: $selectedNodeID,
+                    selectedBranchID: $selectedBranchID
                 )
                     .position(position)
             }

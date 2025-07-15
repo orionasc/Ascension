@@ -3,7 +3,10 @@ import SwiftUI
 /// Visual representation of a single node with an enlarged hit area.
 struct NodeView: View {
     var node: Node
+    var branchID: UUID
     var selected: Bool
+    @Binding var selectedNodeID: UUID?
+    @Binding var selectedBranchID: UUID?
 
     /// Padding applied around the node for hit testing.
     static let hitPadding: CGFloat = 20
@@ -31,11 +34,21 @@ struct NodeView: View {
             .shadow(color: node.completed ? .clear : node.attribute.color,
                     radius: node.completed ? 0 : 6)
             .allowsHitTesting(true)
+            .onTapGesture {
+                selectedNodeID = node.id
+                selectedBranchID = branchID
+            }
     }
 }
 
 #if DEBUG
 #Preview {
-    NodeView(node: Node(), selected: true)
+    NodeView(
+        node: Node(),
+        branchID: UUID(),
+        selected: false,
+        selectedNodeID: .constant(nil),
+        selectedBranchID: .constant(nil)
+    )
 }
 #endif
