@@ -198,13 +198,25 @@ struct EditorToolbarView: View {
 
     private func bindingForBranch(_ id: UUID?) -> Binding<Branch>? {
         guard let id else { return nil }
-        guard let idx = branches.firstIndex(where: { $0.id == id }) else { return nil }
+        guard let idx = branches.firstIndex(where: { $0.id == id }) else {
+            DispatchQueue.main.async {
+                selectedBranchID = nil
+                selectedNodeID = nil
+            }
+            return nil
+        }
         return $branches[idx]
     }
 
     private func bindingForNode(_ id: UUID?, branchID: UUID?) -> Binding<Node>? {
-        guard let id, let branchBinding = bindingForBranch(branchID) else { return nil }
-        guard let idx = branchBinding.nodes.wrappedValue.firstIndex(where: { $0.id == id }) else { return nil }
+        guard let id, let branchID else { return nil }
+        guard let branchBinding = bindingForBranch(branchID) else { return nil }
+        guard let idx = branchBinding.nodes.wrappedValue.firstIndex(where: { $0.id == id }) else {
+            DispatchQueue.main.async {
+                selectedNodeID = nil
+            }
+            return nil
+        }
         return branchBinding.nodes[idx]
     }
 

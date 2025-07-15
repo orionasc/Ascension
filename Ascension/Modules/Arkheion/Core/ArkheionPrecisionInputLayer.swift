@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Unified input layer capturing taps and converting them to map coordinates.
 struct ArkheionPrecisionInputLayer: View {
     var zoom: CGFloat
     var offset: CGSize
@@ -13,6 +12,9 @@ struct ArkheionPrecisionInputLayer: View {
     var onClearSelection: () -> Void
     var onCreateBranch: (Double, Int) -> Void
 
+    @State private var lastTapTime: Date? = nil
+    private let doubleTapThreshold: TimeInterval = 0.3
+
     enum SelectionResult {
         case node(branch: UUID, node: UUID)
         case branch(UUID)
@@ -24,18 +26,41 @@ struct ArkheionPrecisionInputLayer: View {
         Rectangle()
             .fill(Color.clear)
             .contentShape(Rectangle())
+            .contentShape(Rectangle())
             .gesture(
-                TapGesture(count: 2)
-                    .onEnded { location in
-                        handleDoubleTap(location)
+                DragGesture(minimumDistance: 0)
+                    .onEnded { value in
+                        let location = value.location
+                        let now = Date()
+
+                        if let lastTime = lastTapTime, now.timeIntervalSince(lastTime) < doubleTapThreshold {
+                            handleDoubleTap(location)
+                            lastTapTime = nil // prevent triple tap
+                        } else {
+                            handleTap(location)
+                            lastTapTime = now
+                        }
                     }
-                    .exclusively(before:
-                        TapGesture(count: 1)
-                            .onEnded { location in
-                                handleTap(location)
-                            }
-                    )
             )
+
+            .simultaneousGesture(
+                TapGesture(count: 1)
+                    .onEnded { location in
+                        let canvasPoint = toCanvasCoords(location)
+                        switch resolveHit(at: canvasPoint) {
+                        case let .node(branch, node):
+                            onSelectNode(branch, node)
+                        case let .branch(id):
+                            onSelectBranch(id)
+                        case let .ring(index):
+                            onSelectRing(index)
+                        case .none:
+                            print("[InputLayer] Clearing selection — no hit detected")
+                            onClearSelection()
+                        }
+                    }
+            )
+
     }
 
     private func handleTap(_ location: CGPoint) {
@@ -48,6 +73,7 @@ struct ArkheionPrecisionInputLayer: View {
         case let .ring(index):
             onSelectRing(index)
         case .none:
+            print("[InputLayer] Clearing selection — no hit detected")
             onClearSelection()
         }
     }
@@ -55,31 +81,25 @@ struct ArkheionPrecisionInputLayer: View {
     private func handleDoubleTap(_ location: CGPoint) {
         let canvasPoint = toCanvasCoords(location)
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let angle = atan2(center.y - canvasPoint.y, canvasPoint.x - center.x)
+        let angle = atan2(canvasPoint.y - center.y, canvasPoint.x - center.x)
         guard let ringIndex = nearestRingIndex(to: canvasPoint) else { return }
         onCreateBranch(angle, ringIndex)
     }
 
-    /// Converts a gesture location to canvas coordinates.
     private func toCanvasCoords(_ location: CGPoint) -> CGPoint {
         var point = location
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        // Undo center offset introduced by GeometryReader
         point.x -= geo.frame(in: .local).origin.x
         point.y -= geo.frame(in: .local).origin.y
-        // Undo panning
         point.x -= offset.width
         point.y -= offset.height
-        // Undo zoom around center
         point.x = center.x + (point.x - center.x) / zoom
         point.y = center.y + (point.y - center.y) / zoom
         return point
     }
 
-    /// Determines what map element resides at a point.
     private func resolveHit(at point: CGPoint) -> SelectionResult {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        // Nodes
         for branch in branches {
             guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             for (i, node) in branch.nodes.enumerated() {
@@ -88,13 +108,15 @@ struct ArkheionPrecisionInputLayer: View {
                     x: center.x + CGFloat(Darwin.cos(branch.angle)) * distance,
                     y: center.y + CGFloat(Darwin.sin(branch.angle)) * distance
                 )
-                let hitRadius = node.size.radius + 20
+                let hitRadius = max(30, node.size.radius + 12)
                 if hypot(point.x - position.x, point.y - position.y) < hitRadius {
+                    print("[HitTest] Tapped at \(point), checking node at \(position), radius \(hitRadius)")
+                    guard !node.id.uuidString.isEmpty else { continue }
                     return .node(branch: branch.id, node: node.id)
                 }
             }
         }
-        // Branch lines
+
         for branch in branches {
             guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             let origin = CGPoint(
@@ -110,11 +132,12 @@ struct ArkheionPrecisionInputLayer: View {
                 return .branch(branch.id)
             }
         }
-        // Rings
+
         let dist = hypot(point.x - center.x, point.y - center.y)
         if let ring = rings.min(by: { abs(dist - $0.radius) < abs(dist - $1.radius) }), abs(dist - ring.radius) < 25 {
             return .ring(ring.ringIndex)
         }
+        print("[HitTest] No node matched for tap at \(point)")
         return .none
     }
 

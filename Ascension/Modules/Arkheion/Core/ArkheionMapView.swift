@@ -294,6 +294,17 @@ struct ArkheionMapView: View {
 
     // MARK: - Selection Helpers
     func select(node: UUID, branch: UUID) {
+        guard store.branches.contains(where: { $0.id == branch }) else {
+            selectedNodeID = nil
+            selectedBranchID = nil
+            return
+        }
+        guard let branchObj = store.branches.first(where: { $0.id == branch }),
+              branchObj.nodes.contains(where: { $0.id == node }) else {
+            selectedNodeID = nil
+            return
+        }
+
         selectedNodeID = node
         selectedBranchID = branch
         selectedRingIndex = nil
@@ -315,12 +326,14 @@ struct ArkheionMapView: View {
         if selectedRingIndex != nil || selectedBranchID != nil || selectedNodeID != nil {
             print("[ArkheionMap] Selection cleared.")
         }
-        selectedRingIndex = nil
-        selectedBranchID = nil
-        selectedNodeID = nil
-        
-        
+
+        DispatchQueue.main.async {
+            selectedRingIndex = nil
+            selectedBranchID = nil
+            selectedNodeID = nil
+        }
     }
+
 
 
 
