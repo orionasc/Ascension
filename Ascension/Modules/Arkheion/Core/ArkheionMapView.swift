@@ -29,6 +29,11 @@ struct ArkheionMapView: View {
     @GestureState internal var gestureZoom: CGFloat = 1.0
     @GestureState internal var dragTranslation: CGSize = .zero
 
+    // Tap timing for gesture recognition
+    @State private var lastTapTime: Date? = nil
+    private let doubleTapThreshold: TimeInterval = 0.3
+    private let tapMovementThreshold: CGFloat = 10
+
     // Grid overlay toggle
     @State var showGrid = true
     // Hover indicator
@@ -110,31 +115,10 @@ struct ArkheionMapView: View {
                 // Expanded invisible layer capturing taps and hovers well
                 // beyond the visible frame.
                 interactionLayer(center: center, geo: geo)
-
-                ArkheionPrecisionInputLayer(
-                    zoom: currentZoom,
-                    offset: CGSize(width: offset.width + dragTranslation.width,
-                                   height: offset.height + dragTranslation.height),
-                    geo: geo,
-                    rings: store.rings,
-                    branches: store.branches,
-                    onSelectBranch: { branchID in
-                        select(branch: branchID)
-                    },
-                    onSelectRing: { index in
-                        highlight(ringIndex: index)
-                        select(ring: index)
-                    },
-                    onClearSelection: clearSelection,
-                    onCreateBranch: { angle, ringIndex in
-                        highlight(ringIndex: ringIndex)
-                        selectedRingIndex = ringIndex
-                        createBranch(at: angle)
-                    }
-                )
                 
             }
             .gesture(panGesture.simultaneously(with: zoomGesture))
+            .simultaneousGesture(precisionGesture(in: geo))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .onAppear {
@@ -199,6 +183,35 @@ struct ArkheionMapView: View {
             }
             .onEnded { value in
                 zoom *= value
+            }
+    }
+
+    /// Handles taps and double taps across the enlarged interaction layer.
+    private func precisionGesture(in geo: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onEnded { value in
+                let dx = value.translation.width
+                let dy = value.translation.height
+                let movement = sqrt(dx * dx + dy * dy)
+                guard movement < tapMovementThreshold else { return }
+
+                let location = value.location
+                let canvasPoint = mapToCanvasCoordinates(location: location, in: geo)
+                let isNode = nodeHitCheck(at: canvasPoint, in: geo)
+
+                let now = Date()
+                if let last = lastTapTime,
+                   now.timeIntervalSince(last) < doubleTapThreshold {
+                    lastTapTime = nil
+                    if isNode {
+                        print("[ArkheionMap] Ignoring double tap \u2014 node was hit")
+                    } else {
+                        handleDoubleTap(at: location, in: geo)
+                    }
+                } else {
+                    handleTap(at: location, in: geo)
+                    lastTapTime = now
+                }
             }
     }
 
