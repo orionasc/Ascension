@@ -20,10 +20,6 @@ struct ArkheionMapView: View {
     @State var selectedBranchID: UUID?
     @State var selectedNodeID: UUID?
 
-    // Multi-selection support
-    @State var selectedRingIndices: Set<Int> = []
-    @State var selectedBranchIDs: Set<UUID> = []
-    @State var selectedNodeIDs: Set<UUID> = []
 
 
     // MARK: - Gestures
@@ -70,7 +66,7 @@ struct ArkheionMapView: View {
                                 ring: ring,
                                 center: center,
                                 highlighted: ring.ringIndex == highlightedRingIndex,
-                                selected: selectedRingIndices.contains(ring.ringIndex)
+                                selected: selectedRingIndex == ring.ringIndex
                             )
                         }
 
@@ -81,9 +77,7 @@ struct ArkheionMapView: View {
                                     center: center,
                                     ringRadius: ring.radius,
                                     selectedBranchID: $selectedBranchID,
-                                    selectedNodeID: $selectedNodeID,
-                                    multiSelected: selectedBranchIDs.contains(branch.id),
-                                    selectedNodeIDs: selectedNodeIDs
+                                    selectedNodeID: $selectedNodeID
                                 ) {
                                     addNode(to: branch.id)
                                 }
@@ -239,7 +233,6 @@ struct ArkheionMapView: View {
             selectedNodeID = hit.nodeID
             selectedRingIndex = nil
             print("[ArkheionMap] Selected node: \(hit.nodeID)")
-            syncSelectionSets()
             return
         }
 
@@ -248,7 +241,6 @@ struct ArkheionMapView: View {
             selectedNodeID = nil
             selectedRingIndex = nil
             print("[ArkheionMap] Selected branch: \(branchID)")
-            syncSelectionSets()
             return
         }
 
@@ -258,13 +250,11 @@ struct ArkheionMapView: View {
             selectedBranchID = nil
             selectedNodeID = nil
             print("[ArkheionMap] Selected ring: \(ringIndex)")
-            syncSelectionSets()
             return
         } else {
             selectedRingIndex = nil
             selectedBranchID = nil
             selectedNodeID = nil
-            syncSelectionSets()
         }
     }
 
@@ -273,7 +263,6 @@ struct ArkheionMapView: View {
         guard let ringIndex = nearestRing(at: location, in: geo) else { return }
         highlight(ringIndex: ringIndex)
         selectedRingIndex = ringIndex
-        syncSelectionSets()
 
         // Calculate the angle of the tap relative to the map center
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
@@ -304,74 +293,13 @@ struct ArkheionMapView: View {
         }
     }
 
-    func performMarqueeSelection(from start: CGPoint, to end: CGPoint, in geo: GeometryProxy) {
-        let p1 = mapToCanvasCoordinates(location: start, in: geo)
-        let p2 = mapToCanvasCoordinates(location: end, in: geo)
-        let rect = CGRect(
-            x: min(p1.x, p2.x),
-            y: min(p1.y, p2.y),
-            width: abs(p2.x - p1.x),
-            height: abs(p2.y - p1.y)
-        )
-
-        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-
-        var ringSet: Set<Int> = []
-        var branchSet: Set<UUID> = []
-        var nodeSet: Set<UUID> = []
-
-        for ring in store.rings {
-            if rect.contains(center) {
-                ringSet.insert(ring.ringIndex)
-            }
-        }
-
-        for branch in store.branches {
-            guard let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
-            let length = CGFloat(branch.nodes.count) * 60
-            let dist = ring.radius + length / 2
-            let bCenter = CGPoint(
-                x: center.x + CGFloat(Darwin.cos(branch.angle)) * dist,
-                y: center.y + CGFloat(Darwin.sin(branch.angle)) * dist
-            )
-            if rect.contains(bCenter) {
-                branchSet.insert(branch.id)
-            }
-            for (idx, node) in branch.nodes.enumerated() {
-                let d = ring.radius + CGFloat(idx + 1) * 60
-                let nPos = CGPoint(
-                    x: center.x + CGFloat(Darwin.cos(branch.angle)) * d,
-                    y: center.y + CGFloat(Darwin.sin(branch.angle)) * d
-                )
-                if rect.contains(nPos) {
-                    nodeSet.insert(node.id)
-                }
-            }
-        }
-
-        selectedRingIndices = ringSet
-        selectedBranchIDs = branchSet
-        selectedNodeIDs = nodeSet
-
-        selectedRingIndex = ringSet.first
-        selectedBranchID = branchSet.first
-        selectedNodeID = nodeSet.first
-    }
-
     func clearSelection() {
-        selectedRingIndices.removeAll()
-        selectedBranchIDs.removeAll()
-        selectedNodeIDs.removeAll()
         selectedRingIndex = nil
         selectedBranchID = nil
         selectedNodeID = nil
     }
 
-    func syncSelectionSets() {
-        selectedRingIndices = selectedRingIndex.map { Set([$0]) } ?? Set<Int>()
-        selectedBranchIDs = selectedBranchID.map { Set([$0]) } ?? Set<UUID>()
-        selectedNodeIDs = selectedNodeID.map { Set([$0]) } ?? Set<UUID>()
-    }
+
 
 }
 
