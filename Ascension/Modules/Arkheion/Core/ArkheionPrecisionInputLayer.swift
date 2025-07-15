@@ -13,7 +13,6 @@ struct ArkheionPrecisionInputLayer: View {
 
     @State private var lastTapTime: Date? = nil
     private let doubleTapThreshold: TimeInterval = 0.3
-    /// Maximum movement (in points) for a drag to count as a tap
     private let tapMovementThreshold: CGFloat = 10
 
     enum SelectionResult {
@@ -30,25 +29,25 @@ struct ArkheionPrecisionInputLayer: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
-                        // If the finger (or mouse) moved too much, treat it as a pan—don't perform a tap.
                         let dx = value.translation.width
                         let dy = value.translation.height
-                        let distance = sqrt(dx * dx + dy * dy)
-                        guard distance < tapMovementThreshold else {
-                            // Let the parent panGesture handle this drag
-                            return
-                        }
+                        let movement = sqrt(dx * dx + dy * dy)
+                        guard movement < tapMovementThreshold else { return }
 
                         let location = value.location
-                        let now = Date()
+                        let canvasPoint = toCanvasCoords(location)
+                        let isNode = nodeHitCheck(at: canvasPoint)
 
+                        let now = Date()
                         if let last = lastTapTime,
                            now.timeIntervalSince(last) < doubleTapThreshold {
-                            // Double-tap detected
-                            handleDoubleTap(location)
                             lastTapTime = nil
+                            if isNode {
+                                print("[InputLayer] Ignoring double tap — node was hit")
+                            } else {
+                                handleDoubleTap(location)
+                            }
                         } else {
-                            // Single tap
                             handleTap(location)
                             lastTapTime = now
                         }
@@ -71,22 +70,19 @@ struct ArkheionPrecisionInputLayer: View {
 
     private func handleDoubleTap(_ location: CGPoint) {
         let canvasPoint = toCanvasCoords(location)
+        guard let ringIndex = nearestRingIndex(to: canvasPoint) else { return }
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
         let angle = atan2(canvasPoint.y - center.y, canvasPoint.x - center.x)
-        guard let ringIndex = nearestRingIndex(to: canvasPoint) else { return }
         onCreateBranch(angle, ringIndex)
     }
 
     private func toCanvasCoords(_ location: CGPoint) -> CGPoint {
         var point = location
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        // Origin offset
         point.x -= geo.frame(in: .local).origin.x
         point.y -= geo.frame(in: .local).origin.y
-        // Pan offset
         point.x -= offset.width
         point.y -= offset.height
-        // Zoom transform
         point.x = center.x + (point.x - center.x) / zoom
         point.y = center.y + (point.y - center.y) / zoom
         return point
@@ -95,7 +91,7 @@ struct ArkheionPrecisionInputLayer: View {
     private func resolveHit(at point: CGPoint) -> SelectionResult {
         let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
 
-        // 1. Branches
+        // Branches
         for branch in branches {
             guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
             let origin = CGPoint(
@@ -112,7 +108,7 @@ struct ArkheionPrecisionInputLayer: View {
             }
         }
 
-        // 2. Rings
+        // Rings
         let dist = hypot(point.x - center.x, point.y - center.y)
         if let ring = rings.min(by: { abs(dist - $0.radius) < abs(dist - $1.radius) }),
            abs(dist - ring.radius) < 25 {
@@ -139,5 +135,25 @@ struct ArkheionPrecisionInputLayer: View {
         t = max(0, min(1, t))
         let proj = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
         return hypot(point.x - proj.x, point.y - proj.y)
+    }
+
+    private func nodeHitCheck(at point: CGPoint) -> Bool {
+        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
+        for branch in branches {
+            guard let ring = rings.first(where: { $0.ringIndex == branch.ringIndex }) else { continue }
+            let direction = CGPoint(x: cos(branch.angle), y: sin(branch.angle))
+            for (i, node) in branch.nodes.enumerated() {
+                let distance = ring.radius + CGFloat(i + 1) * 60
+                let nodePos = CGPoint(
+                    x: center.x + direction.x * distance,
+                    y: center.y + direction.y * distance
+                )
+                let radius = max(node.size.radius, 12) + 10
+                if hypot(point.x - nodePos.x, point.y - nodePos.y) <= radius {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }

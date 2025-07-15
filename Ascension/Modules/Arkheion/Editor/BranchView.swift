@@ -70,6 +70,7 @@ struct BranchView: View {
                     selectedBranchID: $selectedBranchID
                 )
                     .position(position)
+               
             }
 
             Circle()
