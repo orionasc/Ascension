@@ -229,33 +229,25 @@ struct ArkheionMapView: View {
     func handleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Tap at \(location)")
         if let hit = hitNode(at: location, in: geo) {
-            selectedBranchID = hit.branchID
-            selectedNodeID = hit.nodeID
-            selectedRingIndex = nil
+            select(node: hit.nodeID, branch: hit.branchID)
             print("[ArkheionMap] Selected node: \(hit.nodeID)")
             return
         }
 
         if let branchID = hitBranch(at: location, in: geo) {
-            selectedBranchID = branchID
-            selectedNodeID = nil
-            selectedRingIndex = nil
+            select(branch: branchID)
             print("[ArkheionMap] Selected branch: \(branchID)")
             return
         }
 
         if let (ringIndex, _) = ringHit(at: location, in: geo) {
             highlight(ringIndex: ringIndex)
-            selectedRingIndex = ringIndex
-            selectedBranchID = nil
-            selectedNodeID = nil
+            select(ring: ringIndex)
             print("[ArkheionMap] Selected ring: \(ringIndex)")
             return
-        } else {
-            selectedRingIndex = nil
-            selectedBranchID = nil
-            selectedNodeID = nil
         }
+
+        clearSelection()
     }
 
     func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
@@ -291,6 +283,25 @@ struct ArkheionMapView: View {
                 highlightedRingIndex = nil
             }
         }
+    }
+
+    // MARK: - Selection Helpers
+    func select(node: UUID, branch: UUID) {
+        selectedNodeID = node
+        selectedBranchID = branch
+        selectedRingIndex = nil
+    }
+
+    func select(branch: UUID) {
+        selectedBranchID = branch
+        selectedNodeID = nil
+        selectedRingIndex = nil
+    }
+
+    func select(ring: Int) {
+        selectedRingIndex = ring
+        selectedBranchID = nil
+        selectedNodeID = nil
     }
 
     func clearSelection() {
