@@ -1,129 +1,116 @@
 import SwiftUI
-#if os(macOS)
-import AppKit
-#endif
 
-/// Main view presenting the Arkheion map. This rewrite focuses on the base
-/// space layer while keeping compatibility with existing data models. Future
-/// versions will layer rings, branches and nodes on top of this canvas.
 struct ArkheionMapView: View {
-
-    /// Data store handling persistence of rings and branches
     @StateObject var store = ArkheionStore()
-    /// Holds the ring currently being edited.
-    @State var editingRing: RingEditTarget?
-    /// Ring briefly highlighted after a tap
-    @State var highlightedRingIndex: Int?
 
-    /// Currently selected elements for the editor toolbar
-    @State var selectedRingIndex: Int?
-    @State var selectedBranchID: UUID?
-    @State var selectedNodeID: UUID?
+    @State private var selectedRingIndex: Int? = nil
+    @State private var selectedBranchID: UUID? = nil
+    @State private var selectedNodeID: UUID? = nil
 
-
-
-    // MARK: - Gestures
     @State private var zoom: CGFloat = 1.0
+    @GestureState private var gestureZoom: CGFloat = 1.0
     @State private var offset: CGSize = .zero
-    @GestureState private var pinchScale: CGFloat = 1.0
     @GestureState private var dragOffset: CGSize = .zero
 
-    // Grid overlay toggle
-    @State var showGrid = true
-
+    @State private var showGrid: Bool = true
+    @State private var editingRing: RingEditTarget? = nil
 
     var body: some View {
         GeometryReader { geo in
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let currentZoom = zoom * pinchScale
+            let currentZoom = zoom * gestureZoom
+            let currentOffset = CGSize(
+                width: offset.width + dragOffset.width,
+                height: offset.height + dragOffset.height
+            )
 
             ZStack {
-                BackgroundLayer()
+                Color.black.ignoresSafeArea()
 
-                ZStack {
-                    if showGrid {
-                        GridOverlayView(size: geo.size, center: center)
-                            .blendMode(.overlay)
-                    }
+                if showGrid {
+                    GridOverlayView(size: geo.size, center: center)
+                        .blendMode(.overlay)
+                }
 
-                    ZStack {
-                        CoreGlowView()
-                            .frame(width: 140, height: 140)
-                            .position(center)
+                CoreGlowView()
+                    .frame(width: 140, height: 140)
+                    .position(center)
 
-                        ForEach(store.rings) { ring in
-                            RingView(
-                                ring: ring,
-                                center: center,
-                                highlighted: ring.ringIndex == highlightedRingIndex,
-                                selected: selectedRingIndex == ring.ringIndex,
-                                onTap: {
-                                    highlight(ringIndex: ring.ringIndex)
-                                    select(ringIndex: ring.ringIndex)
-                                }
-                            )
-                        }
-
-                        ForEach($store.branches) { $branch in
-                            if let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }) {
-                                BranchView(
-                                    branch: $branch,
-                                    center: center,
-                                    ringRadius: ring.radius,
-                                    selectedBranchID: $selectedBranchID,
-                                    onTap: {
-                                        select(branchID: branch.id)
-                                    }
-                                )
-                            }
-                        }
-
+                ForEach(store.rings) { ring in
+                    RingView(
+                        ring: ring,
+                        center: center,
+                        highlighted: false,
+                        selected: selectedRingIndex == ring.ringIndex
+                    )
+                    .onTapGesture {
+                        select(ring: ring.ringIndex)
                     }
                 }
 
-                .scaleEffect(currentZoom)
-                .offset(x: offset.width + dragOffset.width,
-                        y: offset.height + dragOffset.height)
-
-                
+                ForEach(store.branches) { branch in
+                    if let ring = store.rings.first(where: { $0.ringIndex == branch.ringIndex }),
+                       let binding = bindingForBranch(branch.id) {
+                        BranchView(
+                            branch: binding,
+                            center: center,
+                            ringRadius: ring.radius,
+                            selectedBranchID: $selectedBranchID,
+                            selectedNodeID: $selectedNodeID
+                        ) {
+                            addNode(to: branch.id)
+                        }
+                        .onTapGesture {
+                            select(branch: branch.id)
+                        }
+                    }
+                }
             }
+            .scaleEffect(currentZoom)
+            .offset(currentOffset)
             .gesture(panGesture.simultaneously(with: zoomGesture))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .ignoresSafeArea()
-            .onAppear {
-                print("[ArkheionMap] Appeared with \(store.rings.count) rings")
-            }
             .overlay(controlButtons, alignment: .bottomTrailing)
             .overlay(alignment: .top) {
                 if let target = editingRing,
                    let binding = bindingForRing(target.ringIndex) {
                     FloatingRingEditorView(
                         ring: binding,
-                        progress: 0,
+                        progress: progress(for: target.ringIndex),
                         onBack: { editingRing = nil }
                     )
                     .padding(.top, 20)
                 }
             }
-            .overlay(alignment: .trailing) {
-                EditorToolbarView(
-                    rings: $store.rings,
-                    branches: $store.branches,
-                    selectedRingIndex: $selectedRingIndex,
-                    selectedBranchID: $selectedBranchID,
-                    addRing: addRing,
-                    unlockAllRings: unlockAllRings,
-                    deleteRing: deleteSelectedRing,
-                    createBranch: createBranchFromToolbar,
-                    deleteBranch: deleteSelectedBranch
-                )
-                .padding(.trailing, 8)
+            .overlay(alignment: .bottomTrailing) {
+                HStack {
+                    Button(action: { showGrid.toggle() }) {
+                        Image(systemName: showGrid ? "xmark.circle" : "circle.grid.2x2")
+                            .font(.title2)
+                            .padding(8)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(Circle())
+                    }
+                    Button(action: addRing) {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .padding(8)
+                            .background(Color.black.opacity(0.4))
+                            .clipShape(Circle())
+                    }
+                    Button("Reset", action: resetCanvas)
+                        .font(.title2)
+                        .padding(8)
+                        .background(Color.black.opacity(0.4))
+                        .clipShape(Capsule())
+                }
+                .padding()
             }
+
         }
     }
 
     // MARK: - Gestures
-    var panGesture: some Gesture {
+    private var panGesture: some Gesture {
         DragGesture()
             .updating($dragOffset) { value, state, _ in
                 state = value.translation
@@ -134,9 +121,9 @@ struct ArkheionMapView: View {
             }
     }
 
-    var zoomGesture: some Gesture {
+    private var zoomGesture: some Gesture {
         MagnificationGesture()
-            .updating($pinchScale) { value, state, _ in
+            .updating($gestureZoom) { value, state, _ in
                 state = value
             }
             .onEnded { value in
@@ -144,66 +131,49 @@ struct ArkheionMapView: View {
             }
     }
 
-
-    func highlight(ringIndex: Int) {
-#if os(iOS)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-#endif
-        print("[ArkheionMap] Highlight ring \(ringIndex)")
-        highlightedRingIndex = ringIndex
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            if highlightedRingIndex == ringIndex {
-                highlightedRingIndex = nil
-            }
-        }
-    }
-
-    // MARK: - Selection Helpers
-    func select(nodeID: UUID, branchID: UUID) {
-        selectedNodeID = nodeID
-        selectedBranchID = branchID
-        selectedRingIndex = nil
-    }
-
-    func select(branchID: UUID) {
-        selectedBranchID = branchID
-        selectedRingIndex = nil
-        selectedNodeID = nil
-    }
-
-    func select(ringIndex: Int) {
-        selectedRingIndex = ringIndex
+    // MARK: - Selection
+    func select(ring index: Int) {
+        selectedRingIndex = index
         selectedBranchID = nil
         selectedNodeID = nil
     }
 
-    func clearSelection() {
-        if selectedRingIndex != nil || selectedBranchID != nil || selectedNodeID != nil {
-            print("[ArkheionMap] Selection cleared.")
-        }
-
-        DispatchQueue.main.async {
-            selectedRingIndex = nil
-            selectedBranchID = nil
-            selectedNodeID = nil
-        }
+    func select(branch id: UUID) {
+        selectedBranchID = id
+        selectedRingIndex = nil
+        selectedNodeID = nil
     }
 
+    func select(node id: UUID, branch: UUID) {
+        selectedNodeID = id
+        selectedBranchID = branch
+        selectedRingIndex = nil
+    }
 
+    // MARK: - Helpers
+    func bindingForBranch(_ id: UUID) -> Binding<Branch>? {
+        guard let index = store.branches.firstIndex(where: { $0.id == id }) else { return nil }
+        return $store.branches[index]
+    }
 
+    func bindingForRing(_ index: Int) -> Binding<Ring>? {
+        guard let i = store.rings.firstIndex(where: { $0.ringIndex == index }) else { return nil }
+        return $store.rings[i]
+    }
 
+    func addNode(to branchID: UUID) {
+        guard let index = store.branches.firstIndex(where: { $0.id == branchID }) else { return }
+        var updated = store.branches
+        updated[index].nodes.insert(Node(), at: 0)
+        store.branches = updated
+    }
 
-}
-
-
-
-// MARK: - Preview
-
-#if DEBUG
-struct ArkheionMapView_Previews: PreviewProvider {
-    static var previews: some View {
-        ArkheionMapView()
+    func progress(for ringIndex: Int) -> Double {
+        let nodes = store.branches
+            .filter { $0.ringIndex == ringIndex }
+            .flatMap { $0.nodes }
+        guard !nodes.isEmpty else { return 0.0 }
+        let completed = nodes.filter { $0.completed }.count
+        return Double(completed) / Double(nodes.count)
     }
 }
-#endif
-
