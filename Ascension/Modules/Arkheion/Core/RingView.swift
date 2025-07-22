@@ -17,7 +17,6 @@ struct RingView: View {
     var center: CGPoint
     var highlighted: Bool = false
     var selected: Bool = false
-    var onTap: (() -> Void)? = nil
 
     private var strokeColor: Color {
         ring.locked ? Color.white.opacity(0.2) : Color.white.opacity(0.4)
@@ -44,9 +43,6 @@ struct RingView: View {
         .shadow(color: ring.locked ? .clear : Color.white.opacity(0.5), radius: ring.locked ? 0 : 4)
         .contentShape(Rectangle())
         .allowsHitTesting(true)
-        .onTapGesture {
-            onTap?()
-        }
     }
 }
 
