@@ -6,7 +6,6 @@ struct BranchView: View {
     var center: CGPoint
     var ringRadius: CGFloat
     @Binding var selectedBranchID: UUID?
-    var onTap: (() -> Void)? = nil
 
     var body: some View {
         // Starting point of the branch at the ring's edge
@@ -38,9 +37,6 @@ struct BranchView: View {
         }
         .contentShape(Rectangle())
         .allowsHitTesting(true)
-        .onTapGesture {
-            onTap?()
-        }
         .zIndex(1)
     }
 }
