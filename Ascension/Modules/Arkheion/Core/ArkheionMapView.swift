@@ -18,6 +18,7 @@ struct ArkheionMapView: View {
     /// Currently selected elements for the editor toolbar
     @State var selectedRingIndex: Int?
     @State var selectedBranchID: UUID?
+    @State var selectedNodeID: UUID?
 
 
 
@@ -70,7 +71,11 @@ struct ArkheionMapView: View {
                                 ring: ring,
                                 center: center,
                                 highlighted: ring.ringIndex == highlightedRingIndex,
-                                selected: selectedRingIndex == ring.ringIndex
+                                selected: selectedRingIndex == ring.ringIndex,
+                                onTap: {
+                                    highlight(ringIndex: ring.ringIndex)
+                                    select(ringIndex: ring.ringIndex)
+                                }
                             )
                         }
 
@@ -80,7 +85,10 @@ struct ArkheionMapView: View {
                                     branch: $branch,
                                     center: center,
                                     ringRadius: ring.radius,
-                                    selectedBranchID: $selectedBranchID
+                                    selectedBranchID: $selectedBranchID,
+                                    onTap: {
+                                        select(branchID: branch.id)
+                                    }
                                 )
                             }
                         }
@@ -108,13 +116,16 @@ struct ArkheionMapView: View {
                 .offset(x: offset.width + dragTranslation.width,
                         y: offset.height + dragTranslation.height)
 
-                // Expanded invisible layer capturing taps and hovers well
-                // beyond the visible frame.
+                // Expanded invisible layer capturing hover movement.
                 interactionLayer(center: center, geo: geo)
+                    .gesture(hoverGesture(in: geo))
+                    .onTapGesture {
+                        clearSelection()
+                    }
                 
             }
             .gesture(panGesture.simultaneously(with: zoomGesture))
-            .simultaneousGesture(precisionGesture(in: geo))
+            .simultaneousGesture(doubleTapGesture(in: geo))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .onAppear {
@@ -177,32 +188,8 @@ struct ArkheionMapView: View {
             }
     }
 
-    /// Handles taps and double taps across the enlarged interaction layer.
-    private func precisionGesture(in geo: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onEnded { value in
-                let dx = value.translation.width
-                let dy = value.translation.height
-                let movement = sqrt(dx * dx + dy * dy)
-                guard movement < tapMovementThreshold else { return }
-
-                let location = value.location
-
-                let now = Date()
-                if let last = lastTapTime,
-                   now.timeIntervalSince(last) < doubleTapThreshold {
-                    lastTapTime = nil
-                    handleDoubleTap(at: location, in: geo)
-                } else {
-                    handleTap(at: location, in: geo)
-                    lastTapTime = now
-                }
-            }
-    }
-
-
-    /// Expanded gesture capturing taps anywhere within the enlarged interaction layer.
-    private func interactionGesture(in geo: GeometryProxy) -> some Gesture {
+    /// Tracks pointer movement across the enlarged interaction layer.
+    private func hoverGesture(in geo: GeometryProxy) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 let location = value.location
@@ -211,7 +198,7 @@ struct ArkheionMapView: View {
             }
             .onEnded { value in
                 let location = value.location
-                handleTap(at: location, in: geo)
+                lastDragLocation = location
                 updateHover(at: location, in: geo)
             }
     }
@@ -223,28 +210,6 @@ struct ArkheionMapView: View {
                 handleDoubleTap(at: location, in: geo)
             }
     }
-
-    // MARK: - Tap Handling
-    func handleTap(at location: CGPoint, in geo: GeometryProxy) {
-        print("[ArkheionMap] Tap at \(location)")
-
-        if let branchID = hitBranch(at: location, in: geo) {
-            select(branch: branchID)
-            print("[ArkheionMap] Selected branch: \(branchID)")
-            return
-        }
-
-        if let (ringIndex, _) = ringHit(at: location, in: geo) {
-            highlight(ringIndex: ringIndex)
-            select(ring: ringIndex)
-            print("[ArkheionMap] Selected ring: \(ringIndex)")
-            return
-        }
-
-        // Only clear if no hits succeeded
-        clearSelection()
-    }
-
 
     func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
         print("[ArkheionMap] Double tap at \(location)")
@@ -282,24 +247,33 @@ struct ArkheionMapView: View {
     }
 
     // MARK: - Selection Helpers
-    func select(branch: UUID) {
-        selectedBranchID = branch
+    func select(nodeID: UUID, branchID: UUID) {
+        selectedNodeID = nodeID
+        selectedBranchID = branchID
         selectedRingIndex = nil
     }
 
-    func select(ring: Int) {
-        selectedRingIndex = ring
+    func select(branchID: UUID) {
+        selectedBranchID = branchID
+        selectedRingIndex = nil
+        selectedNodeID = nil
+    }
+
+    func select(ringIndex: Int) {
+        selectedRingIndex = ringIndex
         selectedBranchID = nil
+        selectedNodeID = nil
     }
 
     func clearSelection() {
-        if selectedRingIndex != nil || selectedBranchID != nil {
+        if selectedRingIndex != nil || selectedBranchID != nil || selectedNodeID != nil {
             print("[ArkheionMap] Selection cleared.")
         }
 
         DispatchQueue.main.async {
             selectedRingIndex = nil
             selectedBranchID = nil
+            selectedNodeID = nil
         }
     }
 
