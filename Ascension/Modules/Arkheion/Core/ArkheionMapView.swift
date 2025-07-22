@@ -23,34 +23,19 @@ struct ArkheionMapView: View {
 
 
     // MARK: - Gestures
-    @State internal var lastDragLocation: CGPoint? = nil
-    @State internal var zoom: CGFloat = 1.0
-    @State internal var offset: CGSize = .zero
-    @GestureState internal var gestureZoom: CGFloat = 1.0
-    @GestureState internal var dragTranslation: CGSize = .zero
-
-    // Tap timing for gesture recognition
-    @State private var lastTapTime: Date? = nil
-    private let doubleTapThreshold: TimeInterval = 0.3
-    private let tapMovementThreshold: CGFloat = 10
+    @State private var zoom: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @GestureState private var pinchScale: CGFloat = 1.0
+    @GestureState private var dragOffset: CGSize = .zero
 
     // Grid overlay toggle
     @State var showGrid = true
-    // Hover indicator
-    @State var hoverRingIndex: Int? = nil
-    @State var hoverAngle: Double = 0.0
-
-    // Custom cursor tracking
-    @State private var cursorLocation: CGPoint? = nil
-
-    /// Scale factor used to expand the invisible hit area around the map.
-    let interactionScale: CGFloat = 4
 
 
     var body: some View {
         GeometryReader { geo in
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-            let currentZoom = zoom * gestureZoom
+            let currentZoom = zoom * pinchScale
 
             ZStack {
                 BackgroundLayer()
@@ -93,46 +78,20 @@ struct ArkheionMapView: View {
                             }
                         }
 
-                        if let index = hoverRingIndex,
-                           let ring = store.rings.first(where: { $0.ringIndex == index }) {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 14, height: 14)
-                                .position(
-                                    x: center.x + CGFloat(Darwin.cos(hoverAngle)) * ring.radius,
-                                    y: center.y + CGFloat(Darwin.sin(hoverAngle)) * ring.radius
-                                )
-                                .opacity(0.9)
-                                .animation(.easeInOut(duration: 0.2), value: hoverRingIndex)
-                                .onTapGesture {
-                                    highlight(ringIndex: index)
-                                    // onRingTapped is reserved for double taps or explicit adds
-                                }
-                        }
                     }
                 }
 
                 .scaleEffect(currentZoom)
-                .offset(x: offset.width + dragTranslation.width,
-                        y: offset.height + dragTranslation.height)
+                .offset(x: offset.width + dragOffset.width,
+                        y: offset.height + dragOffset.height)
 
-                // Expanded invisible layer capturing hover movement.
-                interactionLayer(center: center, geo: geo)
-                    .gesture(hoverGesture(in: geo))
-                    .onTapGesture {
-                        clearSelection()
-                    }
                 
             }
             .gesture(panGesture.simultaneously(with: zoomGesture))
-            .simultaneousGesture(doubleTapGesture(in: geo))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .ignoresSafeArea()
             .onAppear {
                 print("[ArkheionMap] Appeared with \(store.rings.count) rings")
-            }
-            .onHover { hovering in
-                if !hovering { hoverRingIndex = nil }
             }
             .overlay(controlButtons, alignment: .bottomTrailing)
             .overlay(alignment: .top) {
@@ -160,16 +119,13 @@ struct ArkheionMapView: View {
                 )
                 .padding(.trailing, 8)
             }
-            .overlay(alignment: .topLeading) {
-                CursorOverlay(location: $cursorLocation)
-            }
         }
     }
 
     // MARK: - Gestures
     var panGesture: some Gesture {
         DragGesture()
-            .updating($dragTranslation) { value, state, _ in
+            .updating($dragOffset) { value, state, _ in
                 state = value.translation
             }
             .onEnded { value in
@@ -180,7 +136,7 @@ struct ArkheionMapView: View {
 
     var zoomGesture: some Gesture {
         MagnificationGesture()
-            .updating($gestureZoom) { value, state, _ in
+            .updating($pinchScale) { value, state, _ in
                 state = value
             }
             .onEnded { value in
@@ -188,50 +144,6 @@ struct ArkheionMapView: View {
             }
     }
 
-    /// Tracks pointer movement across the enlarged interaction layer.
-    private func hoverGesture(in geo: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                let location = value.location
-                lastDragLocation = location
-                updateHover(at: location, in: geo)
-            }
-            .onEnded { value in
-                let location = value.location
-                lastDragLocation = location
-                updateHover(at: location, in: geo)
-            }
-    }
-
-    private func doubleTapGesture(in geo: GeometryProxy) -> some Gesture {
-        TapGesture(count: 2)
-            .onEnded {
-                let location = lastDragLocation ?? .zero
-                handleDoubleTap(at: location, in: geo)
-            }
-    }
-
-    func handleDoubleTap(at location: CGPoint, in geo: GeometryProxy) {
-        print("[ArkheionMap] Double tap at \(location)")
-        guard let ringIndex = nearestRing(at: location, in: geo) else { return }
-        highlight(ringIndex: ringIndex)
-        selectedRingIndex = ringIndex
-
-        // Calculate the angle of the tap relative to the map center
-        let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
-        let point = mapToCanvasCoordinates(location: location, in: geo)
-        let angle = atan2(point.y - center.y, point.x - center.x)
-        print("[ArkheionMap] Computed angle \(angle)")
-
-        createBranch(at: Double(angle))
-    }
-
-    func handleLongPress(at location: CGPoint, in geo: GeometryProxy) {
-        print("[ArkheionMap] Long press at \(location)")
-        guard let index = nearestRing(at: location, in: geo) else { return }
-        toggleLock(for: index)
-        highlight(ringIndex: index)
-    }
 
     func highlight(ringIndex: Int) {
 #if os(iOS)
